@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase to Excel Exporter</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE'
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        .resizable-th {
+            position: relative;
+            cursor: col-resize;
+        }
+        .resizable-th::after {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: 25%;
+            height: 50%;
+            width: 4px;
+            background-color: #e0e0e0;
+            opacity: 0.5;
+            cursor: col-resize;
+        }
+        .resizable-th:hover::after {
+            opacity: 1;
+            background-color: #aaa;
+        }
+        .table-sort-icon {
+            display: inline-block;
+            width: 0;
+            height: 0;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .table-sort-icon.asc {
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 4px solid currentColor;
+        }
+        .table-sort-icon.desc {
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 4px solid currentColor;
+        }
+        .dragging {
+            opacity: 0.7;
+            background-color: #f3f4f6;
+        }
+        .sortable-ghost {
+            opacity: 0.2;
+            background-color: #e5e7eb;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            .dragging {
+                background-color: #374151;
+            }
+            .sortable-ghost {
+                background-color: #4b5563;
+            }
+        }
+        
+        /* For RTL support */
+        [dir="rtl"] .resizable-th::after {
+            right: auto;
+            left: 0;
+        }
+        [dir="rtl"] .table-sort-icon {
+            margin-left: 0;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+    <div class="container mx-auto p-4 max-w-6xl">
+        <h1 class="text-3xl font-bold text-center mb-8 text-primary dark:text-primary">Firebase to Excel Exporter</h1>
+        
+        <!-- Step 1: Firebase Config (Hidden) -->
+        <div id="step1" class="hidden">
+            <input id="apiKey" type="hidden" value="AIzaSyBGmPBvFrap25W2d-BueVCjHmWJh5vAaiU">
+            <input id="authDomain" type="hidden" value="reg-time.firebaseapp.com">
+            <input id="projectId" type="hidden" value="reg-time">
+            <input id="storageBucket" type="hidden" value="reg-time.firebasestorage.app">
+            <input id="messagingSenderId" type="hidden" value="388216258796">
+            <input id="appId" type="hidden" value="1:388216258796:web:61ebca12e7c6c9e05765c9">
+        </div>
+
+        <!-- Step 2: Authentication -->
+        <div id="step2" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
+            <h2 class="text-xl font-semibold mb-4">Step 2: Authentication</h2>
+            <div id="authStatus" class="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md">
+                Not authenticated
+            </div>
+            <div id="loginForm">
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Email</label>
+                    <input id="email" type="email" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Email">
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Password</label>
+                    <input id="password" type="password" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Password">
+                </div>
+                <button id="login" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">Login</button>
+            </div>
+            <div id="logoutSection" class="hidden">
+                <p class="mb-2" id="userEmail"></p>
+                <button id="logout" class="px-6 py-2 bg-red-500 text-white rounded-md hover:bg-opacity-90 transition-all">Logout</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Query Configuration -->
+        <div id="step3" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
+            <h2 class="text-xl font-semibold mb-4">Step 3: Firestore Query</h2>
+            <div class="mb-4">
+                <label class="block mb-2 text-sm font-medium">Collection Path</label>
+                <input id="collectionPath" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Collection path (e.g., attendance)" value="attendance">
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2 text-sm font-medium">Document ID (Optional)</label>
+                <input id="documentId" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Document ID (leave blank to get all)" value="1BUulOjoUiPuxQloMec9">
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2 text-sm font-medium">Limit</label>
+                <input id="limit" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Limit (default: 100)" value="100">
+            </div>
+            <button id="fetchData" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">Fetch Data</button>
+        </div>
+
+        <!-- Step 4: Results and Export -->
+        <div id="step4" class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
+            <div class="flex flex-wrap justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Step 4: Results</h2>
+                <div class="flex flex-wrap gap-2 mt-2 sm:mt-0">
+                    <div class="relative">
+                        <button id="tableOptionsBtn" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
+                            Table Options
+                        </button>
+                        <div id="tableOptionsMenu" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 hidden">
+                            <div class="p-3">
+                                <div class="mb-2">
+                                    <label class="block mb-1 text-sm font-medium">Table Size</label>
+                                    <select id="tableWidth" class="w-full px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                        <option value="auto">Auto (Horizontal Scroll)</option>
+                                        <option value="full">Full Width (Compact)</option>
+                                        <option value="max">Maximum Width (Show All)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="block mb-1 text-sm font-medium">Direction</label>
+                                    <select id="tableDirection" class="w-full px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                        <option value="auto">Auto</option>
+                                        <option value="ltr">Left to Right (LTR)</option>
+                                        <option value="rtl">Right to Left (RTL)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="flex items-center text-sm">
+                                        <input type="checkbox" id="alternateRowColors" class="mr-2" checked>
+                                        Alternate Row Colors
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="p-3 border-t border-gray-200 dark:border-gray-700">
+                                <button id="resetTableSettings" class="w-full px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md">Reset Settings</button>
+                            </div>
+                            <div class="p-3 border-t border-gray-200 dark:border-gray-700">
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Tip: Drag column headers to reorder. Click headers to sort.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="toggleColumns" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all">Toggle Columns</button>
+                    <button id="exportExcel" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all hidden">Export to Excel</button>
+                </div>
+            </div>
+            
+            <!-- Column toggle panel -->
+            <div id="columnTogglePanel" class="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-md hidden">
+                <h3 class="text-sm font-semibold mb-2">Toggle Column Visibility</h3>
+                <div id="columnToggles" class="flex flex-wrap gap-2"></div>
+            </div>
+            
+            <div id="loadingData" class="flex flex-col items-center py-10 hidden">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <p class="mt-4">Loading data...</p>
+            </div>
+            
+            <div id="tableContainer" class="hidden">
+                <div id="dataTableContainer" class="overflow-auto">
+                    <table id="dataTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-100 dark:bg-gray-700">
+                            <tr id="tableHeader"></tr>
+                        </thead>
+                        <tbody id="tableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                    </table>
+                </div>
+                <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                    <span id="rowCount">0</span> rows found.
+                </div>
+            </div>
+            
+            <div id="noDataMessage" class="py-10 text-center hidden">
+                <p>No data found. Please check your query parameters.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Language direction detection
+        function setDirection() {
+            const direction = document.getElementById('tableDirection').value;
+            if (direction === 'auto') {
+                // Auto-detect language from browser
+                const isRTL = ['ar', 'he', 'fa', 'ur'].includes(navigator.language.substring(0, 2));
+                document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+            } else {
+                document.documentElement.setAttribute('dir', direction);
+            }
+        }
+
+        // Global variables
+        let firebaseApp;
+        let db;
+        let fetchedData = [];
+        let headers = [];
+        let visibleColumns = new Set();
+        let sortConfig = { column: null, direction: 'asc' };
+        let columnWidths = {};
+        let sortable; // SortableJS instance for reordering columns
+
+        // Auto-configure Firebase on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            configureFirebase();
+            setupTableOptions();
+            setDirection();
+        });
+
+        function configureFirebase() {
+            const config = {
+                apiKey: document.getElementById('apiKey').value,
+                authDomain: document.getElementById('authDomain').value,
+                projectId: document.getElementById('projectId').value,
+                storageBucket: document.getElementById('storageBucket').value,
+                messagingSenderId: document.getElementById('messagingSenderId').value,
+                appId: document.getElementById('appId').value,
+                measurementId: "G-4Q8T869WC1"
+            };
+
+            try {
+                // Initialize Firebase
+                firebaseApp = firebase.initializeApp(config);
+                db = firebaseApp.firestore();
+                
+                // Show Step 2
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+                
+                // Setup auth state change listener
+                firebase.auth().onAuthStateChanged(user => {
+                    if (user) {
+                        // User is signed in
+                        document.getElementById('authStatus').textContent = 'Authenticated';
+                        document.getElementById('authStatus').classList.remove('bg-yellow-100', 'dark:bg-yellow-900', 'text-yellow-800', 'dark:text-yellow-200');
+                        document.getElementById('authStatus').classList.add('bg-green-100', 'dark:bg-green-900', 'text-green-800', 'dark:text-green-200');
+                        
+                        document.getElementById('loginForm').classList.add('hidden');
+                        document.getElementById('logoutSection').classList.remove('hidden');
+                        document.getElementById('userEmail').textContent = `Logged in as: ${user.email}`;
+                        
+                        // Show Step 3
+                        document.getElementById('step3').classList.remove('hidden');
+                    } else {
+                        // User is signed out
+                        document.getElementById('authStatus').textContent = 'Not authenticated';
+                        document.getElementById('authStatus').classList.remove('bg-green-100', 'dark:bg-green-900', 'text-green-800', 'dark:text-green-200');
+                        document.getElementById('authStatus').classList.add('bg-yellow-100', 'dark:bg-yellow-900', 'text-yellow-800', 'dark:text-yellow-200');
+                        
+                        document.getElementById('loginForm').classList.remove('hidden');
+                        document.getElementById('logoutSection').classList.add('hidden');
+                        
+                        // Hide Step 3 and 4
+                        document.getElementById('step3').classList.add('hidden');
+                        document.getElementById('step4').classList.add('hidden');
+                    }
+                });
+            } catch (error) {
+                alert(`Error initializing Firebase: ${error.message}`);
+            }
+        }
+
+        function setupTableOptions() {
+            // Table options dropdown toggle
+            document.getElementById('tableOptionsBtn').addEventListener('click', () => {
+                const menu = document.getElementById('tableOptionsMenu');
+                menu.classList.toggle('hidden');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (event) => {
+                const menu = document.getElementById('tableOptionsMenu');
+                const button = document.getElementById('tableOptionsBtn');
+                if (!menu.classList.contains('hidden') && !menu.contains(event.target) && !button.contains(event.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+            
+            // Table width setting
+            document.getElementById('tableWidth').addEventListener('change', applyTableSettings);
+            
+            // Row color setting
+            document.getElementById('alternateRowColors').addEventListener('change', applyTableSettings);
+            
+            // Direction setting
+            document.getElementById('tableDirection').addEventListener('change', () => {
+                setDirection();
+                applyTableSettings();
+            });
+            
+            // Reset settings
+            document.getElementById('resetTableSettings').addEventListener('click', () => {
+                document.getElementById('tableWidth').value = 'auto';
+                document.getElementById('tableDirection').value = 'auto';
+                document.getElementById('alternateRowColors').checked = true;
+                setDirection();
+                applyTableSettings();
+            });
+            
+            // Toggle columns button
+            document.getElementById('toggleColumns').addEventListener('click', () => {
+                const panel = document.getElementById('columnTogglePanel');
+                panel.classList.toggle('hidden');
+            });
+        }
+
+        function applyTableSettings() {
+            const tableWidth = document.getElementById('tableWidth').value;
+            const alternateRows = document.getElementById('alternateRowColors').checked;
+            const table = document.getElementById('dataTable');
+            const tableContainer = document.getElementById('dataTableContainer');
+            
+            // Apply table width setting
+            if (tableWidth === 'auto') {
+                tableContainer.classList.add('overflow-auto');
+                table.classList.add('min-w-full');
+                table.classList.remove('w-full', 'table-fixed');
+                tableContainer.style.maxWidth = '';
+            } else if (tableWidth === 'full') {
+                tableContainer.classList.remove('overflow-auto');
+                table.classList.add('w-full');
+                table.classList.remove('min-w-full', 'table-fixed');
+                tableContainer.style.maxWidth = '100%';
+            } else if (tableWidth === 'max') {
+                tableContainer.classList.add('overflow-auto');
+                table.classList.add('table-fixed');
+                table.classList.remove('min-w-full', 'w-full');
+                table.style.width = (headers.length * 200) + 'px';
+            }
+            
+            // Apply row colors setting
+            const rows = document.querySelectorAll('#tableBody tr');
+            rows.forEach((row, index) => {
+                row.classList.remove('bg-white', 'bg-gray-50', 'dark:bg-gray-800', 'dark:bg-gray-700');
+                if (alternateRows) {
+                    if (index % 2 === 0) {
+                        row.classList.add('bg-white', 'dark:bg-gray-800');
+                    } else {
+                        row.classList.add('bg-gray-50', 'dark:bg-gray-700');
+                    }
+                } else {
+                    row.classList.add('bg-white', 'dark:bg-gray-800');
+                }
+            });
+        }
+
+        // Step 2: Authentication
+        document.getElementById('login').addEventListener('click', () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                alert('Please enter email and password');
+                return;
+            }
+            
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .catch(error => {
+                    alert(`Login error: ${error.message}`);
+                });
+        });
+
+        document.getElementById('logout').addEventListener('click', () => {
+            firebase.auth().signOut();
+        });
+
+        // Step 3: Fetch Data
+        document.getElementById('fetchData').addEventListener('click', async () => {
+            const collectionPath = document.getElementById('collectionPath').value;
+            const documentId = document.getElementById('documentId').value.trim();
+            const limit = parseInt(document.getElementById('limit').value) || 100;
+            
+            if (!collectionPath) {
+                alert('Please enter a collection path');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('step4').classList.remove('hidden');
+            document.getElementById('loadingData').classList.remove('hidden');
+            document.getElementById('tableContainer').classList.add('hidden');
+            document.getElementById('noDataMessage').classList.add('hidden');
+            document.getElementById('exportExcel').classList.add('hidden');
+            document.getElementById('columnTogglePanel').classList.add('hidden');
+            
+            try {
+                // Try different approaches to get the data
+                console.log("Starting data fetch with multiple strategies");
+                
+                // First approach: Try direct collection query with where clause
+                console.log("Strategy 1: Direct collection query");
+                if (documentId) {
+                    const directQuery = await db.collection(collectionPath)
+                        .where("__name__", ">=", documentId)
+                        .limit(limit)
+                        .get();
+                    
+                    if (!directQuery.empty) {
+                        console.log(`Found ${directQuery.docs.length} documents directly`);
+                        fetchedData = directQuery.docs.map(doc => ({
+                            id: doc.id,
+                            strategy: "direct_query",
+                            ...doc.data()
+                        }));
+                    } else {
+                        console.log("Direct query returned no results, trying next approach");
+                    }
+                }
+                
+                // If we have no results yet, try other strategies
+                if (fetchedData.length === 0 && documentId) {
+                    // Second approach: Get specific document and look for arrays or maps
+                    console.log("Strategy 2: Document with arrays/maps");
+                    const docRef = db.collection(collectionPath).doc(documentId);
+                    const docSnapshot = await docRef.get();
+                    
+                    if (docSnapshot.exists) {
+                        console.log("Document exists, checking for array or map fields");
+                        const docData = docSnapshot.data();
+                        
+                        // Initialize with the document itself
+                        const docRow = {id: docSnapshot.id, strategy: "document", ...docData};
+                        
+                        // Look for any array fields that could contain our data
+                        let foundArrayData = false;
+                        for (const [key, value] of Object.entries(docData)) {
+                            if (Array.isArray(value) && value.length > 0) {
+                                console.log(`Found array field: ${key} with ${value.length} items`);
+                                // Extract array items to individual rows
+                                const arrayData = value.map((item, index) => {
+                                    // If item is an object, flatten it
+                                    if (item && typeof item === 'object') {
+                                        return {
+                                            id: `${docSnapshot.id}_${key}_${index}`,
+                                            parent_doc: docSnapshot.id,
+                                            array_field: key,
+                                            array_index: index,
+                                            strategy: "array_field",
+                                            ...item
+                                        };
+                                    } else {
+                                        // For primitive values
+                                        return {
+                                            id: `${docSnapshot.id}_${key}_${index}`,
+                                            parent_doc: docSnapshot.id,
+                                            array_field: key,
+                                            array_index: index,
+                                            strategy: "array_field",
+                                            value: item
+                                        };
+                                    }
+                                });
+                                fetchedData = [...arrayData];
+                                foundArrayData = true;
+                            }
+                        }
+                        
+                        // If no array data found, just use the document itself
+                        if (!foundArrayData) {
+                            fetchedData = [docRow];
+                        }
+                    } else {
+                        console.log("Document does not exist, trying subcollection approach");
+                    }
+                }
+                
+                // Third approach: Try as subcollection
+                if (fetchedData.length === 0) {
+                    console.log("Strategy 3: Subcollection approach");
+                    // Try attendance/{documentId}/*
+                    if (documentId) {
+                        let subPath = `${collectionPath}/${documentId}`;
+                        console.log(`Trying subcollection path: ${subPath}`);
+                        
+                        try {
+                            const subcollectionDocs = await db.collection(subPath).limit(limit).get();
+                            
+                            if (!subcollectionDocs.empty) {
+                                console.log(`Found ${subcollectionDocs.docs.length} documents in subcollection`);
+                                fetchedData = subcollectionDocs.docs.map(doc => ({
+                                    id: doc.id,
+                                    parent_path: subPath,
+                                    strategy: "subcollection",
+                                    ...doc.data()
+                                }));
+                            } else {
+                                console.log("No documents in subcollection");
+                            }
+                        } catch (error) {
+                            console.error("Error trying subcollection approach:", error);
+                        }
+                    }
+                }
+                
+                // Fourth approach: Query view URL format
+                if (fetchedData.length === 0) {
+                    console.log("Strategy 4: Full collection");
+                    // Try fetching from collection without document ID constraint
+                    const allDocs = await db.collection(collectionPath)
+                        .limit(limit)
+                        .get();
+                        
+                    if (!allDocs.empty) {
+                        console.log(`Found ${allDocs.docs.length} documents in collection`);
+                        fetchedData = allDocs.docs.map(doc => ({
+                            id: doc.id,
+                            strategy: "full_collection",
+                            ...doc.data()
+                        }));
+                    }
+                }
+                
+                // Process and display the fetched data
+                document.getElementById('loadingData').classList.add('hidden');
+                
+                if (fetchedData.length === 0) {
+                    document.getElementById('noDataMessage').classList.remove('hidden');
+                    return;
+                }
+                
+                // Update row count
+                document.getElementById('rowCount').textContent = fetchedData.length;
+                
+                // Extract all possible headers from all documents
+                headers = ['id'];
+                fetchedData.forEach(item => {
+                    Object.keys(item).forEach(key => {
+                        if (key !== 'id' && !headers.includes(key)) {
+                            headers.push(key);
+                        }
+                    });
+                });
+                
+                // Initialize visibleColumns with all headers
+                visibleColumns = new Set(headers);
+                
+                // Create column toggle checkboxes
+                createColumnToggles();
+                
+                // Create and display the table
+                renderTable();
+                
+                // Show table and export button
+                document.getElementById('tableContainer').classList.remove('hidden');
+                document.getElementById('exportExcel').classList.remove('hidden');
+                
+                // Apply table settings
+                applyTableSettings();
+                
+            } catch (error) {
+                document.getElementById('loadingData').classList.add('hidden');
+                alert(`Error fetching data: ${error.message}`);
+            }
+        });
+
+        // Create column toggle checkboxes
+        function createColumnToggles() {
+            const container = document.getElementById('columnToggles');
+            container.innerHTML = '';
+            
+            headers.forEach(header => {
+                const checkboxId = `toggle-${header}`;
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'inline-flex items-center';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = checkboxId;
+                checkbox.className = 'mr-1';
+                checkbox.checked = visibleColumns.has(header);
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        visibleColumns.add(header);
+                    } else {
+                        visibleColumns.delete(header);
+                    }
+                    renderTable();
+                });
+                
+                const label = document.createElement('label');
+                label.htmlFor = checkboxId;
+                label.className = 'text-sm mr-3';
+                label.textContent = header;
+                
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(label);
+                container.appendChild(wrapper);
+            });
+        }
+
+        // Create the data table with headers and rows
+        function renderTable() {
+            const visibleHeaders = headers.filter(header => visibleColumns.has(header));
+            
+            // Create table header
+            const headerRow = document.getElementById('tableHeader');
+            headerRow.innerHTML = '';
+            
+            // Create table headers with sorting and reordering capabilities
+            visibleHeaders.forEach(header => {
+                const th = document.createElement('th');
+                th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider resizable-th';
+                th.dataset.column = header;
+                
+                // Set width from saved columnWidths if available
+                if (columnWidths[header]) {
+                    th.style.width = columnWidths[header];
+                }
+                
+                // Create header content with sort icon
+                const headerContent = document.createElement('div');
+                headerContent.className = 'flex items-center cursor-pointer';
+                headerContent.textContent = header;
+                
+                // Add sort icon if this column is sorted
+                if (sortConfig.column === header) {
+                    const sortIcon = document.createElement('span');
+                    sortIcon.className = `table-sort-icon ${sortConfig.direction}`;
+                    headerContent.appendChild(sortIcon);
+                }
+                
+                // Add sorting functionality
+                headerContent.addEventListener('click', () => {
+                    // Update sort configuration
+                    if (sortConfig.column === header) {
+                        // Toggle direction if clicking the same column
+                        sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        // Set new column and default to ascending
+                        sortConfig.column = header;
+                        sortConfig.direction = 'asc';
+                    }
+                    
+                    // Sort and re-render the table
+                    sortData();
+                    renderTable();
+                });
+                
+                th.appendChild(headerContent);
+                headerRow.appendChild(th);
+            });
+            
+            // Make headers draggable for reordering
+            if (sortable) {
+                sortable.destroy();
+            }
+            
+            sortable = new Sortable(headerRow, {
+                animation: 150,
+                handle: 'th',
+                draggable: 'th',
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'dragging',
+                onEnd: function() {
+                    // Re-order headers array based on current DOM order
+                    const newHeaders = [];
+                    headerRow.querySelectorAll('th').forEach(th => {
+                        const column = th.dataset.column;
+                        newHeaders.push(column);
+                    });
+                    
+                    // Update headers with the subset of visible columns in their new order
+                    const remaining = headers.filter(h => !visibleColumns.has(h));
+                    headers = [...newHeaders, ...remaining];
+                    
+                    // Re-render the table
+                    renderTable();
+                }
+            });
+            
+            // Make columns resizable
+            headerRow.querySelectorAll('th').forEach(th => {
+                th.addEventListener('mousedown', function(e) {
+                    // Only handle resize if clicked near the right edge
+                    const rect = th.getBoundingClientRect();
+                    const isRTL = document.dir === 'rtl';
+                    const edge = isRTL ? 'left' : 'right';
+                    const edgePos = isRTL ? rect.left : rect.right;
+                    const isEdge = isRTL 
+                        ? (e.clientX - edgePos < 5) 
+                        : (edgePos - e.clientX < 5);
+                    
+                    if (!isEdge) return;
+                    
+                    e.preventDefault();
+                    
+                    const startX = e.clientX;
+                    const startWidth = th.offsetWidth;
+                    const column = th.dataset.column;
+                    
+                    function handleMouseMove(e) {
+                        const width = isRTL 
+                            ? startWidth - (e.clientX - startX)
+                            : startWidth + (e.clientX - startX);
+                        
+                        if (width > 50) {
+                            th.style.width = `${width}px`;
+                            columnWidths[column] = `${width}px`;
+                        }
+                    }
+                    
+                    function handleMouseUp() {
+                        document.removeEventListener('mousemove', handleMouseMove);
+                        document.removeEventListener('mouseup', handleMouseUp);
+                    }
+                    
+                    document.addEventListener('mousemove', handleMouseMove);
+                    document.addEventListener('mouseup', handleMouseUp);
+                });
+            });
+            
+            // Create table body
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            fetchedData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                
+                // Apply alternating row colors if enabled
+                if (document.getElementById('alternateRowColors').checked) {
+                    row.className = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                } else {
+                    row.className = 'bg-white dark:bg-gray-800';
+                }
+                
+                visibleHeaders.forEach(header => {
+                    const td = document.createElement('td');
+                    td.className = 'px-6 py-4 whitespace-nowrap text-sm';
+                    
+                    // Format cell value based on type
+                    let value = item[header];
+                    if (value === undefined) {
+                        td.textContent = '';
+                    } else if (value === null) {
+                        td.textContent = 'null';
+                    } else if (typeof value === 'object') {
+                        if (value instanceof Date) {
+                            td.textContent = value.toISOString();
+                        } else if (value.toDate && typeof value.toDate === 'function') {
+                            // Handle Firestore Timestamp
+                            td.textContent = value.toDate().toISOString();
+                        } else {
+                            td.textContent = JSON.stringify(value);
+                        }
+                    } else {
+                        td.textContent = value.toString();
+                    }
+                    
+                    row.appendChild(td);
+                });
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Sort the data based on sortConfig
+        function sortData() {
+            const { column, direction } = sortConfig;
+            
+            if (column) {
+                fetchedData.sort((a, b) => {
+                    const aValue = a[column];
+                    const bValue = b[column];
+                    
+                    // Handle different value types
+                    let comparison = 0;
+                    
+                    if (aValue === undefined && bValue === undefined) {
+                        comparison = 0;
+                    } else if (aValue === undefined) {
+                        comparison = -1;
+                    } else if (bValue === undefined) {
+                        comparison = 1;
+                    } else if (aValue === null && bValue === null) {
+                        comparison = 0;
+                    } else if (aValue === null) {
+                        comparison = -1;
+                    } else if (bValue === null) {
+                        comparison = 1;
+                    } else if (typeof aValue === 'object' && aValue.toDate && typeof aValue.toDate === 'function') {
+                        // Firestore timestamps
+                        comparison = aValue.toDate().getTime() - bValue.toDate().getTime();
+                    } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+                        comparison = aValue - bValue;
+                    } else {
+                        // Convert to strings for comparison
+                        const aString = String(aValue);
+                        const bString = String(bValue);
+                        comparison = aString.localeCompare(bString);
+                    }
+                    
+                    return direction === 'asc' ? comparison : -comparison;
+                });
+            }
+        }
+
+        // Export to Excel
+        document.getElementById('exportExcel').addEventListener('click', () => {
+            if (fetchedData.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            try {
+                // Get visible headers for export
+                const visibleHeaders = headers.filter(header => visibleColumns.has(header));
+                
+                // Prepare worksheet data with only visible columns
+                const ws_data = [visibleHeaders];
+                
+                fetchedData.forEach(item => {
+                    const row = [];
+                    visibleHeaders.forEach(header => {
+                        let value = item[header];
+                        
+                        // Format value for Excel
+                        if (value === undefined) {
+                            value = '';
+                        } else if (value === null) {
+                            value = 'null';
+                        } else if (typeof value === 'object') {
+                            if (value instanceof Date) {
+                                value = value.toISOString();
+                            } else if (value.toDate && typeof value.toDate === 'function') {
+                                // Handle Firestore Timestamp
+                                value = value.toDate().toISOString();
+                            } else {
+                                value = JSON.stringify(value);
+                            }
+                        }
+                        
+                        row.push(value);
+                    });
+                    
+                    ws_data.push(row);
+                });
+                
+                // Create worksheet and workbook
+                const ws = XLSX.utils.aoa_to_sheet(ws_data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'FirestoreData');
+                
+                // Generate filename
+                const collectionPath = document.getElementById('collectionPath').value;
+                const documentId = document.getElementById('documentId').value.trim();
+                const filename = documentId 
+                    ? `${collectionPath}_${documentId}.xlsx` 
+                    : `${collectionPath}_data.xlsx`;
+                
+                // Export to file
+                XLSX.writeFile(wb, filename);
+                
+            } catch (error) {
+                alert(`Error exporting to Excel: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>
