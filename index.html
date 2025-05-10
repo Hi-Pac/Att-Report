@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase to Excel Exporter</title>
+    <title>نظام رواتب الموظفين</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -86,11 +86,44 @@
             margin-left: 0;
             margin-right: 6px;
         }
+        
+        .tab-active {
+            border-bottom: 2px solid #5D5CDE;
+            color: #5D5CDE;
+        }
+        
+        /* Custom scrollbar for the tables */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Dark mode for scrollbar */
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4a5568;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
     <div class="container mx-auto p-4 max-w-6xl">
-        <h1 class="text-3xl font-bold text-center mb-8 text-primary dark:text-primary">Firebase to Excel Exporter</h1>
+        <h1 class="text-3xl font-bold text-center mb-8 text-primary dark:text-primary">نظام رواتب الموظفين</h1>
         
         <!-- Step 1: Firebase Config (Hidden) -->
         <div id="step1" class="hidden">
@@ -104,119 +137,245 @@
 
         <!-- Step 2: Authentication -->
         <div id="step2" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
-            <h2 class="text-xl font-semibold mb-4">Step 2: Authentication</h2>
+            <h2 class="text-xl font-semibold mb-4">تسجيل الدخول</h2>
             <div id="authStatus" class="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md">
-                Not authenticated
+                يرجى تسجيل الدخول
             </div>
             <div id="loginForm">
                 <div class="mb-4">
-                    <label class="block mb-2 text-sm font-medium">Email</label>
-                    <input id="email" type="email" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Email">
+                    <label class="block mb-2 text-sm font-medium">البريد الإلكتروني</label>
+                    <input id="email" type="email" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="البريد الإلكتروني">
                 </div>
                 <div class="mb-4">
-                    <label class="block mb-2 text-sm font-medium">Password</label>
-                    <input id="password" type="password" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Password">
+                    <label class="block mb-2 text-sm font-medium">كلمة المرور</label>
+                    <input id="password" type="password" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="كلمة المرور">
                 </div>
-                <button id="login" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">Login</button>
+                <button id="login" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">تسجيل الدخول</button>
             </div>
             <div id="logoutSection" class="hidden">
                 <p class="mb-2" id="userEmail"></p>
-                <button id="logout" class="px-6 py-2 bg-red-500 text-white rounded-md hover:bg-opacity-90 transition-all">Logout</button>
+                <button id="logout" class="px-6 py-2 bg-red-500 text-white rounded-md hover:bg-opacity-90 transition-all">تسجيل الخروج</button>
             </div>
         </div>
 
-        <!-- Step 3: Query Configuration -->
+        <!-- Step 3: Query Configuration and Salary Settings -->
         <div id="step3" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
-            <h2 class="text-xl font-semibold mb-4">Step 3: Firestore Query</h2>
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium">Collection Path</label>
-                <input id="collectionPath" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Collection path (e.g., attendance)" value="attendance">
+            <h2 class="text-xl font-semibold mb-4">إعدادات الرواتب والبيانات</h2>
+            
+            <!-- Data Query Section -->
+            <div class="mb-6 border-b dark:border-gray-700 pb-4">
+                <h3 class="text-lg font-medium mb-3">استعلام بيانات الحضور</h3>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">مسار المجموعة</label>
+                    <input id="collectionPath" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="مسار المجموعة (مثال: attendance)" value="attendance">
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">رقم المستند (اختياري)</label>
+                    <input id="documentId" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="رقم المستند (اتركه فارغاً للحصول على الكل)" value="1BUulOjoUiPuxQloMec9">
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">الحد الأقصى للنتائج</label>
+                    <input id="limit" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="الحد الأقصى للنتائج (افتراضي: 100)" value="100">
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" id="ignoreTimeErrors" class="mr-2" checked>
+                        تجاهل أخطاء بيانات الوقت (موصى به)
+                    </label>
+                </div>
             </div>
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium">Document ID (Optional)</label>
-                <input id="documentId" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Document ID (leave blank to get all)" value="1BUulOjoUiPuxQloMec9">
+            
+            <!-- Salary Settings Section -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-3">إعدادات الرواتب</h3>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">معدل الساعة الافتراضي</label>
+                    <div class="flex">
+                        <input id="defaultHourlyRate" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="معدل الساعة الافتراضي لجميع الموظفين" value="15">
+                        <select id="currency" class="ml-2 px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <option value="ج.م">ج.م (الجنيه المصري)</option>
+                            <option value="$">$ (دولار أمريكي)</option>
+                            <option value="€">€ (يورو)</option>
+                            <option value="£">£ (جنيه إسترليني)</option>
+                            <option value="¥">¥ (ين ياباني)</option>
+                            <option value="₹">₹ (روبية هندية)</option>
+                            <option value="د.إ">د.إ (درهم إماراتي)</option>
+                            <option value="﷼">﷼ (ريال سعودي)</option>
+                            <option value="ر.س">ر.س (ريال سعودي)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">مضاعف ساعات العمل الإضافي</label>
+                    <input id="overtimeMultiplier" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="مضاعف ساعات العمل الإضافي (مثال: 1.5)" value="1.5" step="0.1" min="1">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">ساعات العمل القياسية في اليوم</label>
+                    <input id="standardHoursPerDay" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="ساعات العمل القياسية في اليوم" value="8" step="0.5" min="1">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">الساعات الافتراضية (إذا كانت بيانات الوقت غير صالحة)</label>
+                    <input id="defaultHours" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="الساعات المستخدمة عند فقدان بيانات الوقت" value="8" step="0.5" min="0">
+                </div>
+                
+                <!-- Employee-Specific Rates and Hours (Optional) -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between">
+                        <label class="block mb-2 text-sm font-medium">أسعار وساعات خاصة بالموظفين (اختياري)</label>
+                        <button id="addEmployeeRate" class="px-3 py-1 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all text-sm">+ إضافة موظف</button>
+                    </div>
+                    <div id="employeeRatesContainer" class="space-y-2 mt-2"></div>
+                </div>
             </div>
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium">Limit</label>
-                <input id="limit" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Limit (default: 100)" value="100">
-            </div>
-            <button id="fetchData" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">Fetch Data</button>
+            
+            <button id="fetchData" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">إنشاء تقرير الرواتب</button>
         </div>
 
         <!-- Step 4: Results and Export -->
         <div id="step4" class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
+            <!-- Tabs for different reports -->
+            <div class="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+                <button id="summaryTabBtn" class="py-2 px-4 text-sm font-medium tab-active">تقرير الرواتب الملخص</button>
+                <button id="detailsTabBtn" class="py-2 px-4 text-sm font-medium">تقرير الحضور التفصيلي</button>
+            </div>
+            
+            <!-- Report actions -->
             <div class="flex flex-wrap justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold">Step 4: Results</h2>
+                <h2 class="text-xl font-semibold" id="reportTitle">تقرير الرواتب الملخص</h2>
                 <div class="flex flex-wrap gap-2 mt-2 sm:mt-0">
                     <div class="relative">
                         <button id="tableOptionsBtn" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
-                            Table Options
+                            خيارات الجدول
                         </button>
                         <div id="tableOptionsMenu" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 hidden">
                             <div class="p-3">
                                 <div class="mb-2">
-                                    <label class="block mb-1 text-sm font-medium">Table Size</label>
+                                    <label class="block mb-1 text-sm font-medium">حجم الجدول</label>
                                     <select id="tableWidth" class="w-full px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                        <option value="auto">Auto (Horizontal Scroll)</option>
-                                        <option value="full">Full Width (Compact)</option>
-                                        <option value="max">Maximum Width (Show All)</option>
+                                        <option value="auto">تلقائي (مع تمرير أفقي)</option>
+                                        <option value="full">عرض كامل (مضغوط)</option>
+                                        <option value="max">أقصى عرض (إظهار الكل)</option>
                                     </select>
                                 </div>
                                 <div class="mb-2">
-                                    <label class="block mb-1 text-sm font-medium">Direction</label>
+                                    <label class="block mb-1 text-sm font-medium">اتجاه</label>
                                     <select id="tableDirection" class="w-full px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                        <option value="auto">Auto</option>
-                                        <option value="ltr">Left to Right (LTR)</option>
-                                        <option value="rtl">Right to Left (RTL)</option>
+                                        <option value="auto">تلقائي</option>
+                                        <option value="ltr">من اليسار إلى اليمين</option>
+                                        <option value="rtl">من اليمين إلى اليسار</option>
                                     </select>
                                 </div>
                                 <div class="mb-2">
                                     <label class="flex items-center text-sm">
                                         <input type="checkbox" id="alternateRowColors" class="mr-2" checked>
-                                        Alternate Row Colors
+                                        ألوان الصفوف المتناوبة
                                     </label>
                                 </div>
                             </div>
                             <div class="p-3 border-t border-gray-200 dark:border-gray-700">
-                                <button id="resetTableSettings" class="w-full px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md">Reset Settings</button>
+                                <button id="resetTableSettings" class="w-full px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md">إعادة تعيين الإعدادات</button>
                             </div>
                             <div class="p-3 border-t border-gray-200 dark:border-gray-700">
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Tip: Drag column headers to reorder. Click headers to sort.</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">نصيحة: اسحب رؤوس الأعمدة لإعادة ترتيبها. انقر على الرؤوس للفرز.</p>
                             </div>
                         </div>
                     </div>
-                    <button id="toggleColumns" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all">Toggle Columns</button>
-                    <button id="exportExcel" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all hidden">Export to Excel</button>
+                    <button id="toggleColumns" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all">عرض/إخفاء الأعمدة</button>
+                    <button id="exportExcel" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all hidden">تصدير إلى Excel</button>
+                </div>
+            </div>
+            
+            <!-- Alerts Panel -->
+            <div id="alertsPanel" class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-blue-700 dark:text-blue-400 hidden">
+                <h3 class="text-sm font-semibold mb-2 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    ملاحظات المعالجة
+                </h3>
+                <div id="alertsList" class="text-sm"></div>
+            </div>
+            
+            <!-- Report summary -->
+            <div id="reportSummary" class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-md hidden">
+                <h3 class="font-medium mb-2">ملخص التقرير</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">إجمالي الموظفين</p>
+                        <p id="totalEmployees" class="text-xl font-semibold">0</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">إجمالي ساعات العمل</p>
+                        <p id="totalHours" class="text-xl font-semibold">0</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">إجمالي الرواتب</p>
+                        <p id="totalSalary" class="text-xl font-semibold">0</p>
+                    </div>
                 </div>
             </div>
             
             <!-- Column toggle panel -->
             <div id="columnTogglePanel" class="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-md hidden">
-                <h3 class="text-sm font-semibold mb-2">Toggle Column Visibility</h3>
+                <h3 class="text-sm font-semibold mb-2">تفعيل/تعطيل الأعمدة</h3>
                 <div id="columnToggles" class="flex flex-wrap gap-2"></div>
             </div>
             
             <div id="loadingData" class="flex flex-col items-center py-10 hidden">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p class="mt-4">Loading data...</p>
+                <p class="mt-4">جاري معالجة البيانات...</p>
             </div>
             
-            <div id="tableContainer" class="hidden">
-                <div id="dataTableContainer" class="overflow-auto">
-                    <table id="dataTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-100 dark:bg-gray-700">
-                            <tr id="tableHeader"></tr>
-                        </thead>
-                        <tbody id="tableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700"></tbody>
-                    </table>
+            <!-- Summary Report View -->
+            <div id="summaryReportView" class="hidden">
+                <div id="summaryTableContainer" class="hidden">
+                    <div id="summaryDataTableContainer" class="overflow-auto custom-scrollbar">
+                        <table id="summaryDataTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-100 dark:bg-gray-700">
+                                <tr id="summaryTableHeader"></tr>
+                            </thead>
+                            <tbody id="summaryTableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                        <span id="summaryRowCount">0</span> موظف
+                    </div>
                 </div>
-                <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span id="rowCount">0</span> rows found.
+            </div>
+            
+            <!-- Detailed Report View -->
+            <div id="detailedReportView" class="hidden">
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">اختر الموظف</label>
+                    <select id="employeeSelector" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="">-- اختر موظفاً --</option>
+                    </select>
+                </div>
+                
+                <div id="detailedTableContainer" class="hidden">
+                    <div id="detailedDataTableContainer" class="overflow-auto custom-scrollbar">
+                        <table id="detailedDataTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-100 dark:bg-gray-700">
+                                <tr id="detailedTableHeader"></tr>
+                            </thead>
+                            <tbody id="detailedTableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                        <span id="detailedRowCount">0</span> سجل
+                    </div>
+                </div>
+                
+                <div id="noEmployeeSelected" class="py-10 text-center">
+                    <p>يرجى اختيار موظف لعرض تفاصيل الحضور.</p>
                 </div>
             </div>
             
             <div id="noDataMessage" class="py-10 text-center hidden">
-                <p>No data found. Please check your query parameters.</p>
+                <p>لم يتم العثور على بيانات الحضور. يرجى التحقق من معلمات الاستعلام الخاصة بك.</p>
             </div>
         </div>
     </div>
@@ -250,17 +409,30 @@
         let firebaseApp;
         let db;
         let fetchedData = [];
-        let headers = [];
-        let visibleColumns = new Set();
-        let sortConfig = { column: null, direction: 'asc' };
-        let columnWidths = {};
-        let sortable; // SortableJS instance for reordering columns
+        let processedData = []; // For storing calculated salary data
+        let employeeDetails = {}; // For storing detailed employee records
+        let summaryHeaders = [];
+        let detailedHeaders = [];
+        let visibleSummaryColumns = new Set();
+        let visibleDetailedColumns = new Set();
+        let summaryTableSortConfig = { column: null, direction: 'asc' };
+        let detailedTableSortConfig = { column: null, direction: 'asc' };
+        let summaryColumnWidths = {};
+        let detailedColumnWidths = {};
+        let summarySortable; // SortableJS instance for reordering columns
+        let detailedSortable; // SortableJS instance for reordering columns
+        let employeeRates = {}; // Store custom rates for employees
+        let employeeHours = {}; // Store custom work hours for employees
+        let processingAlerts = []; // Track alerts during processing
+        let currentView = 'summary'; // Track which view is currently active
 
         // Auto-configure Firebase on page load
         document.addEventListener('DOMContentLoaded', () => {
             configureFirebase();
             setupTableOptions();
             setDirection();
+            setupEmployeeRates();
+            setupTabNavigation();
         });
 
         function configureFirebase() {
@@ -287,19 +459,19 @@
                 firebase.auth().onAuthStateChanged(user => {
                     if (user) {
                         // User is signed in
-                        document.getElementById('authStatus').textContent = 'Authenticated';
+                        document.getElementById('authStatus').textContent = 'تم تسجيل الدخول بنجاح';
                         document.getElementById('authStatus').classList.remove('bg-yellow-100', 'dark:bg-yellow-900', 'text-yellow-800', 'dark:text-yellow-200');
                         document.getElementById('authStatus').classList.add('bg-green-100', 'dark:bg-green-900', 'text-green-800', 'dark:text-green-200');
                         
                         document.getElementById('loginForm').classList.add('hidden');
                         document.getElementById('logoutSection').classList.remove('hidden');
-                        document.getElementById('userEmail').textContent = `Logged in as: ${user.email}`;
+                        document.getElementById('userEmail').textContent = `تم تسجيل الدخول كـ: ${user.email}`;
                         
                         // Show Step 3
                         document.getElementById('step3').classList.remove('hidden');
                     } else {
                         // User is signed out
-                        document.getElementById('authStatus').textContent = 'Not authenticated';
+                        document.getElementById('authStatus').textContent = 'لم يتم تسجيل الدخول';
                         document.getElementById('authStatus').classList.remove('bg-green-100', 'dark:bg-green-900', 'text-green-800', 'dark:text-green-200');
                         document.getElementById('authStatus').classList.add('bg-yellow-100', 'dark:bg-yellow-900', 'text-yellow-800', 'dark:text-yellow-200');
                         
@@ -312,8 +484,100 @@
                     }
                 });
             } catch (error) {
-                alert(`Error initializing Firebase: ${error.message}`);
+                alert(`خطأ في تهيئة Firebase: ${error.message}`);
             }
+        }
+
+        function setupTabNavigation() {
+            // Setup tab buttons
+            document.getElementById('summaryTabBtn').addEventListener('click', () => {
+                switchView('summary');
+            });
+            
+            document.getElementById('detailsTabBtn').addEventListener('click', () => {
+                switchView('detailed');
+            });
+        }
+        
+        function switchView(view) {
+            currentView = view;
+            
+            // Update tab buttons
+            document.getElementById('summaryTabBtn').classList.toggle('tab-active', view === 'summary');
+            document.getElementById('detailsTabBtn').classList.toggle('tab-active', view === 'detailed');
+            
+            // Update report title
+            document.getElementById('reportTitle').textContent = view === 'summary' ? 'تقرير الرواتب الملخص' : 'تقرير الحضور التفصيلي';
+            
+            // Show/hide appropriate views
+            document.getElementById('summaryReportView').classList.toggle('hidden', view !== 'summary');
+            document.getElementById('detailedReportView').classList.toggle('hidden', view !== 'detailed');
+            
+            // Apply table settings in case they've changed
+            applyTableSettings();
+        }
+
+        function setupEmployeeRates() {
+            // Setup add employee rate button
+            document.getElementById('addEmployeeRate').addEventListener('click', () => {
+                const container = document.getElementById('employeeRatesContainer');
+                const index = container.children.length;
+                
+                const employeeRateRow = document.createElement('div');
+                employeeRateRow.className = 'flex flex-wrap items-center gap-2 p-3 border rounded-md dark:border-gray-700';
+                employeeRateRow.innerHTML = `
+                    <div class="w-full md:w-auto flex-grow">
+                        <label class="block mb-1 text-xs font-medium">اسم الموظف</label>
+                        <input type="text" placeholder="اسم أو معرف الموظف" class="employee-id w-full px-3 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="w-1/3 md:w-auto">
+                        <label class="block mb-1 text-xs font-medium">المعدل للساعة</label>
+                        <input type="number" placeholder="المعدل بالساعة" class="employee-rate w-full px-3 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" step="0.01" min="0">
+                    </div>
+                    <div class="w-1/3 md:w-auto">
+                        <label class="block mb-1 text-xs font-medium">ساعات العمل/يوم</label>
+                        <input type="number" placeholder="ساعات العمل" class="employee-hours w-full px-3 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" step="0.5" min="0">
+                    </div>
+                    <div class="w-1/3 md:w-auto flex items-end">
+                        <button class="remove-rate ml-1 px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-all">×</button>
+                    </div>
+                `;
+                
+                const removeBtn = employeeRateRow.querySelector('.remove-rate');
+                removeBtn.addEventListener('click', () => {
+                    employeeRateRow.remove();
+                    updateEmployeeRatesObject();
+                });
+                
+                const inputs = employeeRateRow.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.addEventListener('input', updateEmployeeRatesObject);
+                });
+                
+                container.appendChild(employeeRateRow);
+            });
+        }
+        
+        function updateEmployeeRatesObject() {
+            employeeRates = {};
+            employeeHours = {};
+            const rows = document.querySelectorAll('#employeeRatesContainer > div');
+            
+            rows.forEach(row => {
+                const employeeId = row.querySelector('.employee-id').value.trim();
+                const rate = parseFloat(row.querySelector('.employee-rate').value);
+                const hours = parseFloat(row.querySelector('.employee-hours').value);
+                
+                if (employeeId) {
+                    if (!isNaN(rate)) {
+                        employeeRates[employeeId] = rate;
+                    }
+                    
+                    if (!isNaN(hours)) {
+                        employeeHours[employeeId] = hours;
+                    }
+                }
+            });
         }
 
         function setupTableOptions() {
@@ -358,46 +622,99 @@
                 const panel = document.getElementById('columnTogglePanel');
                 panel.classList.toggle('hidden');
             });
+            
+            // Employee selector for detailed view
+            document.getElementById('employeeSelector').addEventListener('change', function() {
+                const employeeId = this.value;
+                
+                if (employeeId) {
+                    document.getElementById('noEmployeeSelected').classList.add('hidden');
+                    document.getElementById('detailedTableContainer').classList.remove('hidden');
+                    renderDetailedTable(employeeId);
+                } else {
+                    document.getElementById('noEmployeeSelected').classList.remove('hidden');
+                    document.getElementById('detailedTableContainer').classList.add('hidden');
+                }
+            });
         }
 
         function applyTableSettings() {
             const tableWidth = document.getElementById('tableWidth').value;
             const alternateRows = document.getElementById('alternateRowColors').checked;
-            const table = document.getElementById('dataTable');
-            const tableContainer = document.getElementById('dataTableContainer');
             
-            // Apply table width setting
-            if (tableWidth === 'auto') {
-                tableContainer.classList.add('overflow-auto');
-                table.classList.add('min-w-full');
-                table.classList.remove('w-full', 'table-fixed');
-                tableContainer.style.maxWidth = '';
-            } else if (tableWidth === 'full') {
-                tableContainer.classList.remove('overflow-auto');
-                table.classList.add('w-full');
-                table.classList.remove('min-w-full', 'table-fixed');
-                tableContainer.style.maxWidth = '100%';
-            } else if (tableWidth === 'max') {
-                tableContainer.classList.add('overflow-auto');
-                table.classList.add('table-fixed');
-                table.classList.remove('min-w-full', 'w-full');
-                table.style.width = (headers.length * 200) + 'px';
-            }
-            
-            // Apply row colors setting
-            const rows = document.querySelectorAll('#tableBody tr');
-            rows.forEach((row, index) => {
-                row.classList.remove('bg-white', 'bg-gray-50', 'dark:bg-gray-800', 'dark:bg-gray-700');
-                if (alternateRows) {
-                    if (index % 2 === 0) {
-                        row.classList.add('bg-white', 'dark:bg-gray-800');
-                    } else {
-                        row.classList.add('bg-gray-50', 'dark:bg-gray-700');
-                    }
-                } else {
-                    row.classList.add('bg-white', 'dark:bg-gray-800');
+            if (currentView === 'summary') {
+                const table = document.getElementById('summaryDataTable');
+                const tableContainer = document.getElementById('summaryDataTableContainer');
+                
+                // Apply table width setting
+                if (tableWidth === 'auto') {
+                    tableContainer.classList.add('overflow-auto');
+                    table.classList.add('min-w-full');
+                    table.classList.remove('w-full', 'table-fixed');
+                    tableContainer.style.maxWidth = '';
+                } else if (tableWidth === 'full') {
+                    tableContainer.classList.remove('overflow-auto');
+                    table.classList.add('w-full');
+                    table.classList.remove('min-w-full', 'table-fixed');
+                    tableContainer.style.maxWidth = '100%';
+                } else if (tableWidth === 'max') {
+                    tableContainer.classList.add('overflow-auto');
+                    table.classList.add('table-fixed');
+                    table.classList.remove('min-w-full', 'w-full');
+                    table.style.width = (summaryHeaders.length * 200) + 'px';
                 }
-            });
+                
+                // Apply row colors setting
+                const rows = document.querySelectorAll('#summaryTableBody tr');
+                rows.forEach((row, index) => {
+                    row.classList.remove('bg-white', 'bg-gray-50', 'dark:bg-gray-800', 'dark:bg-gray-700');
+                    if (alternateRows) {
+                        if (index % 2 === 0) {
+                            row.classList.add('bg-white', 'dark:bg-gray-800');
+                        } else {
+                            row.classList.add('bg-gray-50', 'dark:bg-gray-700');
+                        }
+                    } else {
+                        row.classList.add('bg-white', 'dark:bg-gray-800');
+                    }
+                });
+            } else if (currentView === 'detailed') {
+                const table = document.getElementById('detailedDataTable');
+                const tableContainer = document.getElementById('detailedDataTableContainer');
+                
+                // Apply table width setting
+                if (tableWidth === 'auto') {
+                    tableContainer.classList.add('overflow-auto');
+                    table.classList.add('min-w-full');
+                    table.classList.remove('w-full', 'table-fixed');
+                    tableContainer.style.maxWidth = '';
+                } else if (tableWidth === 'full') {
+                    tableContainer.classList.remove('overflow-auto');
+                    table.classList.add('w-full');
+                    table.classList.remove('min-w-full', 'table-fixed');
+                    tableContainer.style.maxWidth = '100%';
+                } else if (tableWidth === 'max') {
+                    tableContainer.classList.add('overflow-auto');
+                    table.classList.add('table-fixed');
+                    table.classList.remove('min-w-full', 'w-full');
+                    table.style.width = (detailedHeaders.length * 200) + 'px';
+                }
+                
+                // Apply row colors setting
+                const rows = document.querySelectorAll('#detailedTableBody tr');
+                rows.forEach((row, index) => {
+                    row.classList.remove('bg-white', 'bg-gray-50', 'dark:bg-gray-800', 'dark:bg-gray-700');
+                    if (alternateRows) {
+                        if (index % 2 === 0) {
+                            row.classList.add('bg-white', 'dark:bg-gray-800');
+                        } else {
+                            row.classList.add('bg-gray-50', 'dark:bg-gray-700');
+                        }
+                    } else {
+                        row.classList.add('bg-white', 'dark:bg-gray-800');
+                    }
+                });
+            }
         }
 
         // Step 2: Authentication
@@ -406,13 +723,13 @@
             const password = document.getElementById('password').value;
             
             if (!email || !password) {
-                alert('Please enter email and password');
+                alert('يرجى إدخال البريد الإلكتروني وكلمة المرور');
                 return;
             }
             
             firebase.auth().signInWithEmailAndPassword(email, password)
                 .catch(error => {
-                    alert(`Login error: ${error.message}`);
+                    alert(`خطأ في تسجيل الدخول: ${error.message}`);
                 });
         });
 
@@ -420,31 +737,44 @@
             firebase.auth().signOut();
         });
 
-        // Step 3: Fetch Data
+        // Step 3: Fetch Data and Generate Salary Report
         document.getElementById('fetchData').addEventListener('click', async () => {
             const collectionPath = document.getElementById('collectionPath').value;
             const documentId = document.getElementById('documentId').value.trim();
             const limit = parseInt(document.getElementById('limit').value) || 100;
             
             if (!collectionPath) {
-                alert('Please enter a collection path');
+                alert('يرجى إدخال مسار المجموعة');
                 return;
             }
+            
+            // Reset alert tracking
+            processingAlerts = [];
+            document.getElementById('alertsPanel').classList.add('hidden');
+            
+            // Update employee rates and hours before processing
+            updateEmployeeRatesObject();
             
             // Show loading state
             document.getElementById('step4').classList.remove('hidden');
             document.getElementById('loadingData').classList.remove('hidden');
-            document.getElementById('tableContainer').classList.add('hidden');
+            document.getElementById('summaryTableContainer').classList.add('hidden');
+            document.getElementById('detailedTableContainer').classList.add('hidden');
             document.getElementById('noDataMessage').classList.add('hidden');
             document.getElementById('exportExcel').classList.add('hidden');
             document.getElementById('columnTogglePanel').classList.add('hidden');
+            document.getElementById('reportSummary').classList.add('hidden');
+            document.getElementById('noEmployeeSelected').classList.add('hidden');
+            
+            // Reset view to summary
+            switchView('summary');
             
             try {
                 // Try different approaches to get the data
-                console.log("Starting data fetch with multiple strategies");
+                console.log("بدء استرداد البيانات باستخدام استراتيجيات متعددة");
                 
                 // First approach: Try direct collection query with where clause
-                console.log("Strategy 1: Direct collection query");
+                console.log("الإستراتيجية 1: استعلام المجموعة المباشر");
                 if (documentId) {
                     const directQuery = await db.collection(collectionPath)
                         .where("__name__", ">=", documentId)
@@ -452,26 +782,26 @@
                         .get();
                     
                     if (!directQuery.empty) {
-                        console.log(`Found ${directQuery.docs.length} documents directly`);
+                        console.log(`تم العثور على ${directQuery.docs.length} مستند مباشرة`);
                         fetchedData = directQuery.docs.map(doc => ({
                             id: doc.id,
                             strategy: "direct_query",
                             ...doc.data()
                         }));
                     } else {
-                        console.log("Direct query returned no results, trying next approach");
+                        console.log("لم يُرجع الاستعلام المباشر أي نتائج، جارٍ تجربة النهج التالي");
                     }
                 }
                 
                 // If we have no results yet, try other strategies
                 if (fetchedData.length === 0 && documentId) {
                     // Second approach: Get specific document and look for arrays or maps
-                    console.log("Strategy 2: Document with arrays/maps");
+                    console.log("الإستراتيجية 2: مستند يحتوي على مصفوفات/خرائط");
                     const docRef = db.collection(collectionPath).doc(documentId);
                     const docSnapshot = await docRef.get();
                     
                     if (docSnapshot.exists) {
-                        console.log("Document exists, checking for array or map fields");
+                        console.log("المستند موجود، جارٍ التحقق من حقول المصفوفة أو الخريطة");
                         const docData = docSnapshot.data();
                         
                         // Initialize with the document itself
@@ -481,7 +811,7 @@
                         let foundArrayData = false;
                         for (const [key, value] of Object.entries(docData)) {
                             if (Array.isArray(value) && value.length > 0) {
-                                console.log(`Found array field: ${key} with ${value.length} items`);
+                                console.log(`تم العثور على حقل المصفوفة: ${key} مع ${value.length} عنصر`);
                                 // Extract array items to individual rows
                                 const arrayData = value.map((item, index) => {
                                     // If item is an object, flatten it
@@ -516,23 +846,23 @@
                             fetchedData = [docRow];
                         }
                     } else {
-                        console.log("Document does not exist, trying subcollection approach");
+                        console.log("المستند غير موجود، جارٍ تجربة نهج المجموعة الفرعية");
                     }
                 }
                 
                 // Third approach: Try as subcollection
                 if (fetchedData.length === 0) {
-                    console.log("Strategy 3: Subcollection approach");
+                    console.log("الإستراتيجية 3: نهج المجموعة الفرعية");
                     // Try attendance/{documentId}/*
                     if (documentId) {
                         let subPath = `${collectionPath}/${documentId}`;
-                        console.log(`Trying subcollection path: ${subPath}`);
+                        console.log(`جارٍ تجربة مسار المجموعة الفرعية: ${subPath}`);
                         
                         try {
                             const subcollectionDocs = await db.collection(subPath).limit(limit).get();
                             
                             if (!subcollectionDocs.empty) {
-                                console.log(`Found ${subcollectionDocs.docs.length} documents in subcollection`);
+                                console.log(`تم العثور على ${subcollectionDocs.docs.length} مستند في المجموعة الفرعية`);
                                 fetchedData = subcollectionDocs.docs.map(doc => ({
                                     id: doc.id,
                                     parent_path: subPath,
@@ -540,24 +870,24 @@
                                     ...doc.data()
                                 }));
                             } else {
-                                console.log("No documents in subcollection");
+                                console.log("لا توجد مستندات في المجموعة الفرعية");
                             }
                         } catch (error) {
-                            console.error("Error trying subcollection approach:", error);
+                            console.error("خطأ في تجربة نهج المجموعة الفرعية:", error);
                         }
                     }
                 }
                 
                 // Fourth approach: Query view URL format
                 if (fetchedData.length === 0) {
-                    console.log("Strategy 4: Full collection");
+                    console.log("الإستراتيجية 4: المجموعة الكاملة");
                     // Try fetching from collection without document ID constraint
                     const allDocs = await db.collection(collectionPath)
                         .limit(limit)
                         .get();
                         
                     if (!allDocs.empty) {
-                        console.log(`Found ${allDocs.docs.length} documents in collection`);
+                        console.log(`تم العثور على ${allDocs.docs.length} مستند في المجموعة`);
                         fetchedData = allDocs.docs.map(doc => ({
                             id: doc.id,
                             strategy: "full_collection",
@@ -566,7 +896,7 @@
                     }
                 }
                 
-                // Process and display the fetched data
+                // Process attendance data and calculate salary
                 document.getElementById('loadingData').classList.add('hidden');
                 
                 if (fetchedData.length === 0) {
@@ -574,83 +904,514 @@
                     return;
                 }
                 
-                // Update row count
-                document.getElementById('rowCount').textContent = fetchedData.length;
+                // Process data to calculate work hours and salary
+                processAttendanceData();
                 
-                // Extract all possible headers from all documents
-                headers = ['id'];
-                fetchedData.forEach(item => {
-                    Object.keys(item).forEach(key => {
-                        if (key !== 'id' && !headers.includes(key)) {
-                            headers.push(key);
-                        }
-                    });
-                });
+                // Create the employee selector for detailed view
+                updateEmployeeSelector();
                 
-                // Initialize visibleColumns with all headers
-                visibleColumns = new Set(headers);
+                // Create and initialize both tables
+                initializeSummaryTable();
                 
-                // Create column toggle checkboxes
-                createColumnToggles();
+                // Update summary information
+                updateReportSummary();
                 
-                // Create and display the table
-                renderTable();
-                
-                // Show table and export button
-                document.getElementById('tableContainer').classList.remove('hidden');
+                // Show table, summary and export button
+                document.getElementById('summaryReportView').classList.remove('hidden');
+                document.getElementById('summaryTableContainer').classList.remove('hidden');
                 document.getElementById('exportExcel').classList.remove('hidden');
+                document.getElementById('reportSummary').classList.remove('hidden');
+                
+                // Show alerts if any occurred during processing (but don't call them errors)
+                if (processingAlerts.length > 0) {
+                    const alertsList = document.getElementById('alertsList');
+                    alertsList.innerHTML = processingAlerts.map(alert => `<p>• ${alert}</p>`).join('');
+                    document.getElementById('alertsPanel').classList.remove('hidden');
+                }
                 
                 // Apply table settings
                 applyTableSettings();
                 
             } catch (error) {
                 document.getElementById('loadingData').classList.add('hidden');
-                alert(`Error fetching data: ${error.message}`);
+                alert(`خطأ في استرداد البيانات: ${error.message}`);
             }
         });
 
-        // Create column toggle checkboxes
-        function createColumnToggles() {
-            const container = document.getElementById('columnToggles');
-            container.innerHTML = '';
+        // Safe date parsing function to handle invalid dates
+        function safeParseDate(value) {
+            if (!value) return null;
             
-            headers.forEach(header => {
-                const checkboxId = `toggle-${header}`;
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = 'inline-flex items-center';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = checkboxId;
-                checkbox.className = 'mr-1';
-                checkbox.checked = visibleColumns.has(header);
-                checkbox.addEventListener('change', () => {
-                    if (checkbox.checked) {
-                        visibleColumns.add(header);
-                    } else {
-                        visibleColumns.delete(header);
+            try {
+                // If it's already a Date object
+                if (value instanceof Date) {
+                    if (!isNaN(value.getTime())) {
+                        return value;
                     }
-                    renderTable();
-                });
+                    throw new Error("كائن تاريخ غير صالح");
+                }
                 
-                const label = document.createElement('label');
-                label.htmlFor = checkboxId;
-                label.className = 'text-sm mr-3';
-                label.textContent = header;
+                // If it's a Firestore timestamp
+                if (value && typeof value === 'object' && value.toDate && typeof value.toDate === 'function') {
+                    try {
+                        const date = value.toDate();
+                        if (!isNaN(date.getTime())) {
+                            return date;
+                        }
+                        throw new Error("طابع زمني Firestore غير صالح");
+                    } catch (e) {
+                        throw new Error("فشل في تحويل طابع زمني Firestore: " + e.message);
+                    }
+                }
                 
-                wrapper.appendChild(checkbox);
-                wrapper.appendChild(label);
-                container.appendChild(wrapper);
+                // If it's a timestamp number (milliseconds since epoch)
+                if (typeof value === 'number') {
+                    const date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                        return date;
+                    }
+                    throw new Error("طابع زمني رقمي غير صالح");
+                }
+                
+                // If it's a string date format
+                if (typeof value === 'string') {
+                    // Try parsing with Date constructor
+                    let date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                        return date;
+                    }
+                    
+                    // Try parsing common formats
+                    // Try DD/MM/YYYY
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
+                        const parts = value.split('/');
+                        date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                        if (!isNaN(date.getTime())) {
+                            return date;
+                        }
+                    }
+                    
+                    // Try MM/DD/YYYY
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
+                        const parts = value.split('/');
+                        date = new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
+                        if (!isNaN(date.getTime())) {
+                            return date;
+                        }
+                    }
+                    
+                    // Try YYYY-MM-DD
+                    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(value)) {
+                        const parts = value.split('-');
+                        date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        if (!isNaN(date.getTime())) {
+                            return date;
+                        }
+                    }
+                    
+                    throw new Error(`تعذر تحليل سلسلة التاريخ: ${value}`);
+                }
+                
+                throw new Error(`تنسيق تاريخ غير مدعوم: ${typeof value}`);
+            } catch (error) {
+                const errorMsg = `خطأ في تحليل التاريخ: ${error.message}`;
+                if (!processingAlerts.includes(errorMsg)) {
+                    processingAlerts.push(errorMsg);
+                }
+                return null;
+            }
+        }
+
+        // Update the employee selector dropdown
+        function updateEmployeeSelector() {
+            const selector = document.getElementById('employeeSelector');
+            selector.innerHTML = '<option value="">-- اختر موظفاً --</option>';
+            
+            // Add an option for each unique employee
+            const employees = Object.keys(employeeDetails);
+            
+            employees.sort().forEach(empId => {
+                const employee = employeeDetails[empId];
+                const option = document.createElement('option');
+                option.value = empId;
+                option.textContent = employee.employeeName || empId;
+                selector.appendChild(option);
             });
         }
 
-        // Create the data table with headers and rows
-        function renderTable() {
-            const visibleHeaders = headers.filter(header => visibleColumns.has(header));
+        // Process attendance data to calculate hours and salary
+        function processAttendanceData() {
+            console.log("معالجة بيانات الحضور لحساب الراتب");
+            
+            // Get salary configuration
+            const defaultHourlyRate = parseFloat(document.getElementById('defaultHourlyRate').value) || 15;
+            const overtimeMultiplier = parseFloat(document.getElementById('overtimeMultiplier').value) || 1.5;
+            const standardHoursPerDay = parseFloat(document.getElementById('standardHoursPerDay').value) || 8;
+            const defaultHours = parseFloat(document.getElementById('defaultHours').value) || 8;
+            const currency = document.getElementById('currency').value;
+            const ignoreTimeErrors = document.getElementById('ignoreTimeErrors').checked;
+            
+            // First, group data by employee
+            const employeeAttendanceMap = new Map();
+            
+            // Check if we should use manual mode if time data is problematic
+            let timeErrorCount = 0;
+            
+            fetchedData.forEach(record => {
+                // Determine employee ID - this depends on your data structure
+                // Look for common employee identifier fields
+                let employeeId = null;
+                let employeeName = null;
+                
+                // Try to find employee identifiers in the data
+                if (record.employeeId) employeeId = record.employeeId;
+                else if (record.employee_id) employeeId = record.employee_id;
+                else if (record.userId) employeeId = record.userId;
+                else if (record.user_id) employeeId = record.user_id;
+                else if (record.uid) employeeId = record.uid;
+                else if (record.id) employeeId = record.id;
+                
+                if (record.employeeName) employeeName = record.employeeName;
+                else if (record.employee_name) employeeName = record.employee_name;
+                else if (record.name) employeeName = record.name;
+                else if (record.userName) employeeName = record.userName;
+                else if (record.user_name) employeeName = record.user_name;
+                else if (record.fullName) employeeName = record.fullName;
+                else if (record.full_name) employeeName = record.full_name;
+                
+                // If we couldn't find an employee ID, try to use the name or other fields
+                if (!employeeId) {
+                    if (employeeName) employeeId = employeeName;
+                    else employeeId = 'employee_' + (Math.floor(Math.random() * 1000) + 1);
+                }
+                
+                // Ensure we have a name, even if it's just the ID
+                if (!employeeName) {
+                    employeeName = employeeId;
+                }
+                
+                // Extract check-in and check-out timestamps
+                let checkIn = null;
+                let checkOut = null;
+                
+                // Try to find timestamp fields (more exhaustive search)
+                if (record.checkIn !== undefined) checkIn = record.checkIn;
+                else if (record.check_in !== undefined) checkIn = record.check_in;
+                else if (record.timeIn !== undefined) checkIn = record.timeIn;
+                else if (record.time_in !== undefined) checkIn = record.time_in;
+                else if (record.startTime !== undefined) checkIn = record.startTime;
+                else if (record.start_time !== undefined) checkIn = record.start_time;
+                else if (record.inTime !== undefined) checkIn = record.inTime;
+                else if (record.in_time !== undefined) checkIn = record.in_time;
+                else if (record.clockIn !== undefined) checkIn = record.clockIn;
+                else if (record.clock_in !== undefined) checkIn = record.clock_in;
+                
+                if (record.checkOut !== undefined) checkOut = record.checkOut;
+                else if (record.check_out !== undefined) checkOut = record.check_out;
+                else if (record.timeOut !== undefined) checkOut = record.timeOut;
+                else if (record.time_out !== undefined) checkOut = record.time_out;
+                else if (record.endTime !== undefined) checkOut = record.endTime;
+                else if (record.end_time !== undefined) checkOut = record.end_time;
+                else if (record.outTime !== undefined) checkOut = record.outTime;
+                else if (record.out_time !== undefined) checkOut = record.out_time;
+                else if (record.clockOut !== undefined) checkOut = record.clockOut;
+                else if (record.clock_out !== undefined) checkOut = record.clock_out;
+                
+                // Try parsing dates safely
+                let parsedCheckIn = null;
+                let parsedCheckOut = null;
+                
+                try {
+                    parsedCheckIn = checkIn ? safeParseDate(checkIn) : null;
+                    parsedCheckOut = checkOut ? safeParseDate(checkOut) : null;
+                    
+                    if (checkIn && !parsedCheckIn) {
+                        timeErrorCount++;
+                    }
+                    
+                    if (checkOut && !parsedCheckOut) {
+                        timeErrorCount++;
+                    }
+                } catch (error) {
+                    // Track the error but continue processing
+                    const errorMsg = `خطأ في معالجة بيانات الوقت للسجل ${record.id}: ${error.message}`;
+                    if (!processingAlerts.includes(errorMsg)) {
+                        processingAlerts.push(errorMsg);
+                    }
+                }
+                
+                // If we have date fields but no timestamp, try to use those
+                let recordDate = null;
+                if (!parsedCheckIn && record.date) {
+                    try {
+                        recordDate = safeParseDate(record.date);
+                    } catch (error) {
+                        // Track the error but continue processing
+                        const errorMsg = `خطأ في تحليل تاريخ السجل ${record.id}: ${error.message}`;
+                        if (!processingAlerts.includes(errorMsg)) {
+                            processingAlerts.push(errorMsg);
+                        }
+                    }
+                } else if (parsedCheckIn) {
+                    recordDate = new Date(parsedCheckIn);
+                    recordDate.setHours(0, 0, 0, 0); // Normalize to start of day
+                } else {
+                    // If we have no date information, use the current date
+                    recordDate = new Date();
+                    recordDate.setHours(0, 0, 0, 0);
+                }
+                
+                // Look for duration fields if we don't have check-in/check-out times
+                let hours = null;
+                if ((!parsedCheckIn || !parsedCheckOut) && record.hours !== undefined) hours = record.hours;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.duration !== undefined) hours = record.duration;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.work_hours !== undefined) hours = record.work_hours;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.workHours !== undefined) hours = record.workHours;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.hoursWorked !== undefined) hours = record.hoursWorked;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.hours_worked !== undefined) hours = record.hours_worked;
+                
+                // Calculate hours worked if we have check-in and check-out
+                if (hours === null && parsedCheckIn && parsedCheckOut) {
+                    try {
+                        // Calculate hours as the difference between timestamps in hours
+                        const diffMs = parsedCheckOut.getTime() - parsedCheckIn.getTime();
+                        
+                        // Validate that check-out is after check-in
+                        if (diffMs < 0) {
+                            // Use default hours as fallback
+                            hours = defaultHours;
+                        } else {
+                            hours = diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
+                            
+                            // Sanity check: if hours is unreasonably large, it might be a data error
+                            if (hours > 24) {
+                                // Cap hours at a reasonable value
+                                hours = Math.min(hours, 16);
+                            }
+                        }
+                    } catch (error) {
+                        // Use default hours as fallback
+                        hours = defaultHours;
+                        
+                        // Track the error but continue processing
+                        const errorMsg = `خطأ في حساب ساعات العمل للموظف ${employeeId}: ${error.message}`;
+                        if (!processingAlerts.includes(errorMsg)) {
+                            processingAlerts.push(errorMsg);
+                        }
+                    }
+                }
+                
+                // If we still don't have hours (no check-in/check-out and no duration field)
+                if (hours === null) {
+                    // Use default hours as fallback
+                    hours = defaultHours;
+                }
+                
+                // If hours is not a number, try to parse it
+                if (typeof hours === 'string') {
+                    try {
+                        const parsedHours = parseFloat(hours);
+                        if (isNaN(parsedHours)) {
+                            throw new Error(`تعذر تحليل قيمة الساعات: ${hours}`);
+                        }
+                        hours = parsedHours;
+                    } catch (error) {
+                        // Use default hours as fallback
+                        hours = defaultHours;
+                        
+                        // Track the error but continue processing
+                        const errorMsg = `خطأ في تحليل الساعات للموظف ${employeeId}: ${error.message}`;
+                        if (!processingAlerts.includes(errorMsg)) {
+                            processingAlerts.push(errorMsg);
+                        }
+                    }
+                }
+                
+                // Ensure hours is a valid number
+                hours = Math.max(0, hours);
+                
+                // Store the attendance record grouped by employee and date
+                if (!employeeAttendanceMap.has(employeeId)) {
+                    employeeAttendanceMap.set(employeeId, {
+                        employeeId: employeeId,
+                        employeeName: employeeName,
+                        attendanceByDate: new Map()
+                    });
+                }
+                
+                const employee = employeeAttendanceMap.get(employeeId);
+                
+                // Group by date string for easy lookup
+                const dateString = recordDate instanceof Date ? recordDate.toISOString().split('T')[0] : 'unknown';
+                
+                if (!employee.attendanceByDate.has(dateString)) {
+                    employee.attendanceByDate.set(dateString, {
+                        date: dateString,
+                        totalHours: 0,
+                        records: []
+                    });
+                }
+                
+                const dayAttendance = employee.attendanceByDate.get(dateString);
+                dayAttendance.totalHours += hours;
+                dayAttendance.records.push({
+                    checkIn: parsedCheckIn,
+                    checkOut: parsedCheckOut,
+                    hours: hours,
+                    rawRecord: record
+                });
+            });
+            
+            // Now calculate salary for each employee and prepare both summary and detailed data
+            processedData = [];
+            employeeDetails = {};
+            
+            employeeAttendanceMap.forEach((employee, employeeId) => {
+                // Calculate total hours for the employee
+                let totalHours = 0;
+                let regularHours = 0;
+                let overtimeHours = 0;
+                
+                // Get employee-specific standard hours if available
+                const employeeStandardHours = employeeHours[employeeId] || 
+                                             employeeHours[employee.employeeName] || 
+                                             standardHoursPerDay;
+                
+                // Store attendance data by date for details
+                const attendanceDetails = [];
+                
+                employee.attendanceByDate.forEach((dayData, dateString) => {
+                    // Calculate regular and overtime hours for this day
+                    const dayRegularHours = Math.min(dayData.totalHours, employeeStandardHours);
+                    const dayOvertimeHours = Math.max(0, dayData.totalHours - employeeStandardHours);
+                    
+                    regularHours += dayRegularHours;
+                    overtimeHours += dayOvertimeHours;
+                    totalHours += dayData.totalHours;
+                    
+                    // Store detailed attendance for this day
+                    attendanceDetails.push({
+                        date: dateString,
+                        totalHours: dayData.totalHours,
+                        regularHours: dayRegularHours,
+                        overtimeHours: dayOvertimeHours,
+                        records: dayData.records
+                    });
+                });
+                
+                // Get hourly rate for this employee (use custom rate if available)
+                let hourlyRate = defaultHourlyRate;
+                if (employeeRates[employeeId]) {
+                    hourlyRate = employeeRates[employeeId];
+                } else if (employeeRates[employee.employeeName]) {
+                    hourlyRate = employeeRates[employee.employeeName];
+                }
+                
+                // Calculate pay
+                const regularPay = regularHours * hourlyRate;
+                const overtimePay = overtimeHours * hourlyRate * overtimeMultiplier;
+                const totalSalary = regularPay + overtimePay;
+                
+                // Create the employee salary record
+                processedData.push({
+                    employeeId: employeeId,
+                    employeeName: employee.employeeName,
+                    totalHours: parseFloat(totalHours.toFixed(2)),
+                    regularHours: parseFloat(regularHours.toFixed(2)),
+                    overtimeHours: parseFloat(overtimeHours.toFixed(2)),
+                    hourlyRate: parseFloat(hourlyRate.toFixed(2)),
+                    regularPay: parseFloat(regularPay.toFixed(2)),
+                    overtimePay: parseFloat(overtimePay.toFixed(2)),
+                    totalSalary: parseFloat(totalSalary.toFixed(2)),
+                    workingDays: attendanceDetails.length,
+                    currency: currency,
+                    standardHoursPerDay: employeeStandardHours
+                });
+                
+                // Store detailed records for the detailed view
+                employeeDetails[employeeId] = {
+                    employeeId: employeeId,
+                    employeeName: employee.employeeName,
+                    hourlyRate: hourlyRate,
+                    standardHoursPerDay: employeeStandardHours,
+                    currency: currency,
+                    attendanceRecords: attendanceDetails.flatMap(day => {
+                        return day.records.map(record => {
+                            const formattedDate = day.date;
+                            
+                            // Format check-in and check-out times for display
+                            let checkInTime = record.checkIn ? 
+                                record.checkIn.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+                                '-';
+                                
+                            let checkOutTime = record.checkOut ? 
+                                record.checkOut.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+                                '-';
+                            
+                            return {
+                                date: formattedDate,
+                                day: new Date(day.date).toLocaleDateString('ar-EG', { weekday: 'long' }),
+                                checkInTime: checkInTime,
+                                checkOutTime: checkOutTime,
+                                hours: parseFloat(record.hours.toFixed(2)),
+                                regularHours: parseFloat(Math.min(record.hours, employeeStandardHours).toFixed(2)),
+                                overtimeHours: parseFloat(Math.max(0, record.hours - employeeStandardHours).toFixed(2)),
+                                dailyPay: parseFloat((record.hours * hourlyRate).toFixed(2)),
+                                rawRecord: record.rawRecord
+                            };
+                        });
+                    }),
+                    totalSummary: {
+                        totalHours: parseFloat(totalHours.toFixed(2)),
+                        regularHours: parseFloat(regularHours.toFixed(2)),
+                        overtimeHours: parseFloat(overtimeHours.toFixed(2)),
+                        regularPay: parseFloat(regularPay.toFixed(2)),
+                        overtimePay: parseFloat(overtimePay.toFixed(2)),
+                        totalSalary: parseFloat(totalSalary.toFixed(2)),
+                        workingDays: attendanceDetails.length
+                    }
+                };
+            });
+            
+            console.log(`تمت معالجة ${processedData.length} سجل راتب موظف`);
+        }
+        
+        // Initialize the summary table
+        function initializeSummaryTable() {
+            // Define summary headers for the summary table
+            summaryHeaders = ['employeeName', 'workingDays', 'totalHours', 'regularHours', 'overtimeHours', 'hourlyRate', 'regularPay', 'overtimePay', 'totalSalary'];
+            
+            // Initialize visibleSummaryColumns with all headers
+            visibleSummaryColumns = new Set(summaryHeaders);
+            
+            // Create column toggle checkboxes
+            createColumnToggles('summary');
+            
+            // Create and display the table
+            renderSummaryTable();
+        }
+        
+        // Render the detailed table for a specific employee
+        function renderDetailedTable(employeeId) {
+            const employee = employeeDetails[employeeId];
+            if (!employee) return;
+            
+            // Define headers for the detailed table
+            detailedHeaders = ['date', 'day', 'checkInTime', 'checkOutTime', 'hours', 'regularHours', 'overtimeHours', 'dailyPay'];
+            
+            // Initialize visibleDetailedColumns with all headers
+            if (visibleDetailedColumns.size === 0) {
+                visibleDetailedColumns = new Set(detailedHeaders);
+            }
+            
+            // Create column toggle checkboxes
+            createColumnToggles('detailed');
+            
+            // Get the visible headers
+            const visibleHeaders = detailedHeaders.filter(header => visibleDetailedColumns.has(header));
             
             // Create table header
-            const headerRow = document.getElementById('tableHeader');
+            const headerRow = document.getElementById('detailedTableHeader');
             headerRow.innerHTML = '';
             
             // Create table headers with sorting and reordering capabilities
@@ -660,37 +1421,50 @@
                 th.dataset.column = header;
                 
                 // Set width from saved columnWidths if available
-                if (columnWidths[header]) {
-                    th.style.width = columnWidths[header];
+                if (detailedColumnWidths[header]) {
+                    th.style.width = detailedColumnWidths[header];
                 }
                 
                 // Create header content with sort icon
                 const headerContent = document.createElement('div');
                 headerContent.className = 'flex items-center cursor-pointer';
-                headerContent.textContent = header;
+                
+                // Translate headers for display
+                let displayHeader = header;
+                switch(header) {
+                    case 'date': displayHeader = 'التاريخ'; break;
+                    case 'day': displayHeader = 'اليوم'; break;
+                    case 'checkInTime': displayHeader = 'وقت الحضور'; break;
+                    case 'checkOutTime': displayHeader = 'وقت الانصراف'; break;
+                    case 'hours': displayHeader = 'الساعات'; break;
+                    case 'regularHours': displayHeader = 'الساعات العادية'; break;
+                    case 'overtimeHours': displayHeader = 'الساعات الإضافية'; break;
+                    case 'dailyPay': displayHeader = 'الأجر اليومي'; break;
+                }
+                
+                headerContent.textContent = displayHeader;
                 
                 // Add sort icon if this column is sorted
-                if (sortConfig.column === header) {
+                if (detailedTableSortConfig.column === header) {
                     const sortIcon = document.createElement('span');
-                    sortIcon.className = `table-sort-icon ${sortConfig.direction}`;
+                    sortIcon.className = `table-sort-icon ${detailedTableSortConfig.direction}`;
                     headerContent.appendChild(sortIcon);
                 }
                 
                 // Add sorting functionality
                 headerContent.addEventListener('click', () => {
                     // Update sort configuration
-                    if (sortConfig.column === header) {
+                    if (detailedTableSortConfig.column === header) {
                         // Toggle direction if clicking the same column
-                        sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+                        detailedTableSortConfig.direction = detailedTableSortConfig.direction === 'asc' ? 'desc' : 'asc';
                     } else {
                         // Set new column and default to ascending
-                        sortConfig.column = header;
-                        sortConfig.direction = 'asc';
+                        detailedTableSortConfig.column = header;
+                        detailedTableSortConfig.direction = 'asc';
                     }
                     
-                    // Sort and re-render the table
-                    sortData();
-                    renderTable();
+                    // Render the table again with new sorting
+                    renderDetailedTable(employeeId);
                 });
                 
                 th.appendChild(headerContent);
@@ -698,11 +1472,11 @@
             });
             
             // Make headers draggable for reordering
-            if (sortable) {
-                sortable.destroy();
+            if (detailedSortable) {
+                detailedSortable.destroy();
             }
             
-            sortable = new Sortable(headerRow, {
+            detailedSortable = new Sortable(headerRow, {
                 animation: 150,
                 handle: 'th',
                 draggable: 'th',
@@ -717,11 +1491,11 @@
                     });
                     
                     // Update headers with the subset of visible columns in their new order
-                    const remaining = headers.filter(h => !visibleColumns.has(h));
-                    headers = [...newHeaders, ...remaining];
+                    const remaining = detailedHeaders.filter(h => !visibleDetailedColumns.has(h));
+                    detailedHeaders = [...newHeaders, ...remaining];
                     
                     // Re-render the table
-                    renderTable();
+                    renderDetailedTable(employeeId);
                 }
             });
             
@@ -752,7 +1526,368 @@
                         
                         if (width > 50) {
                             th.style.width = `${width}px`;
-                            columnWidths[column] = `${width}px`;
+                            detailedColumnWidths[column] = `${width}px`;
+                        }
+                    }
+                    
+                    function handleMouseUp() {
+                        document.removeEventListener('mousemove', handleMouseMove);
+                        document.removeEventListener('mouseup', handleMouseUp);
+                    }
+                    
+                    document.addEventListener('mousemove', handleMouseMove);
+                    document.addEventListener('mouseup', handleMouseUp);
+                });
+            });
+            
+            // Get the data for this employee
+            let records = [...employee.attendanceRecords];
+            
+            // Sort the data if needed
+            if (detailedTableSortConfig.column) {
+                const { column, direction } = detailedTableSortConfig;
+                
+                records.sort((a, b) => {
+                    let aValue = a[column];
+                    let bValue = b[column];
+                    
+                    // Special handling for date sorting
+                    if (column === 'date') {
+                        aValue = new Date(a.date);
+                        bValue = new Date(b.date);
+                        return direction === 'asc' 
+                            ? aValue - bValue 
+                            : bValue - aValue;
+                    } 
+                    // For other columns, use standard comparison
+                    else {
+                        if (typeof aValue === 'number' && typeof bValue === 'number') {
+                            return direction === 'asc' 
+                                ? aValue - bValue 
+                                : bValue - aValue;
+                        } else {
+                            // Convert to strings for comparison
+                            const aString = String(aValue);
+                            const bString = String(bValue);
+                            return direction === 'asc' 
+                                ? aString.localeCompare(bString) 
+                                : bString.localeCompare(aString);
+                        }
+                    }
+                });
+            }
+            
+            // Create table body
+            const tableBody = document.getElementById('detailedTableBody');
+            tableBody.innerHTML = '';
+            
+            records.forEach((record, index) => {
+                const row = document.createElement('tr');
+                
+                // Apply alternating row colors if enabled
+                if (document.getElementById('alternateRowColors').checked) {
+                    row.className = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                } else {
+                    row.className = 'bg-white dark:bg-gray-800';
+                }
+                
+                visibleHeaders.forEach(header => {
+                    const td = document.createElement('td');
+                    td.className = 'px-6 py-4 whitespace-nowrap text-sm';
+                    
+                    // Format cell value based on type
+                    const value = record[header];
+                    
+                    // Apply special formatting for currency fields
+                    if (header === 'dailyPay') {
+                        td.textContent = `${employee.currency}${value.toFixed(2)}`;
+                    } 
+                    // Format hours with 2 decimal places
+                    else if (header === 'hours' || header === 'regularHours' || header === 'overtimeHours') {
+                        td.textContent = value.toFixed(2);
+                    }
+                    // For other fields just display the value
+                    else if (value === undefined || value === null) {
+                        td.textContent = '-';
+                    } else {
+                        td.textContent = value.toString();
+                    }
+                    
+                    row.appendChild(td);
+                });
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Update row count
+            document.getElementById('detailedRowCount').textContent = records.length;
+            
+            // Add a summary row at the bottom
+            const summaryRow = document.createElement('tr');
+            summaryRow.className = 'bg-gray-100 dark:bg-gray-700 font-semibold';
+            
+            visibleHeaders.forEach(header => {
+                const td = document.createElement('td');
+                td.className = 'px-6 py-4 whitespace-nowrap text-sm';
+                
+                let summaryValue = '';
+                
+                // Set appropriate summary values for each column
+                switch (header) {
+                    case 'date':
+                        td.textContent = 'الإجمالي';
+                        break;
+                    case 'day':
+                        td.textContent = `${employee.totalSummary.workingDays} يوم`;
+                        break;
+                    case 'hours':
+                        td.textContent = employee.totalSummary.totalHours.toFixed(2);
+                        break;
+                    case 'regularHours':
+                        td.textContent = employee.totalSummary.regularHours.toFixed(2);
+                        break;
+                    case 'overtimeHours':
+                        td.textContent = employee.totalSummary.overtimeHours.toFixed(2);
+                        break;
+                    case 'dailyPay':
+                        td.textContent = `${employee.currency}${employee.totalSummary.totalSalary.toFixed(2)}`;
+                        break;
+                    default:
+                        td.textContent = '';
+                }
+                
+                summaryRow.appendChild(td);
+            });
+            
+            tableBody.appendChild(summaryRow);
+            
+            // Apply table settings
+            applyTableSettings();
+        }
+        
+        // Update report summary information
+        function updateReportSummary() {
+            const totalEmployees = processedData.length;
+            
+            let totalHours = 0;
+            let totalSalaryAmount = 0;
+            const currency = document.getElementById('currency').value;
+            
+            processedData.forEach(employee => {
+                totalHours += employee.totalHours;
+                totalSalaryAmount += employee.totalSalary;
+            });
+            
+            document.getElementById('totalEmployees').textContent = totalEmployees;
+            document.getElementById('totalHours').textContent = totalHours.toFixed(2);
+            document.getElementById('totalSalary').textContent = `${currency}${totalSalaryAmount.toFixed(2)}`;
+        }
+
+        // Create column toggle checkboxes
+        function createColumnToggles(viewType) {
+            const container = document.getElementById('columnToggles');
+            container.innerHTML = '';
+            
+            let headers, visibleColumns;
+            
+            if (viewType === 'summary') {
+                headers = summaryHeaders;
+                visibleColumns = visibleSummaryColumns;
+            } else {
+                headers = detailedHeaders;
+                visibleColumns = visibleDetailedColumns;
+            }
+            
+            headers.forEach(header => {
+                const checkboxId = `toggle-${viewType}-${header}`;
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'inline-flex items-center';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = checkboxId;
+                checkbox.className = 'mr-1';
+                checkbox.checked = visibleColumns.has(header);
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        visibleColumns.add(header);
+                    } else {
+                        visibleColumns.delete(header);
+                    }
+                    
+                    if (viewType === 'summary') {
+                        renderSummaryTable();
+                    } else {
+                        const employeeId = document.getElementById('employeeSelector').value;
+                        if (employeeId) {
+                            renderDetailedTable(employeeId);
+                        }
+                    }
+                });
+                
+                const label = document.createElement('label');
+                label.htmlFor = checkboxId;
+                label.className = 'text-sm mr-3';
+                
+                // Translate headers for display
+                let displayHeader = header;
+                if (viewType === 'summary') {
+                    switch(header) {
+                        case 'employeeName': displayHeader = 'اسم الموظف'; break;
+                        case 'workingDays': displayHeader = 'أيام العمل'; break;
+                        case 'totalHours': displayHeader = 'إجمالي الساعات'; break;
+                        case 'regularHours': displayHeader = 'الساعات العادية'; break;
+                        case 'overtimeHours': displayHeader = 'الساعات الإضافية'; break;
+                        case 'hourlyRate': displayHeader = 'معدل الساعة'; break;
+                        case 'regularPay': displayHeader = 'الأجر العادي'; break;
+                        case 'overtimePay': displayHeader = 'أجر العمل الإضافي'; break;
+                        case 'totalSalary': displayHeader = 'إجمالي الراتب'; break;
+                    }
+                } else {
+                    switch(header) {
+                        case 'date': displayHeader = 'التاريخ'; break;
+                        case 'day': displayHeader = 'اليوم'; break;
+                        case 'checkInTime': displayHeader = 'وقت الحضور'; break;
+                        case 'checkOutTime': displayHeader = 'وقت الانصراف'; break;
+                        case 'hours': displayHeader = 'الساعات'; break;
+                        case 'regularHours': displayHeader = 'الساعات العادية'; break;
+                        case 'overtimeHours': displayHeader = 'الساعات الإضافية'; break;
+                        case 'dailyPay': displayHeader = 'الأجر اليومي'; break;
+                    }
+                }
+                
+                label.textContent = displayHeader;
+                
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(label);
+                container.appendChild(wrapper);
+            });
+        }
+
+        // Create the summary data table with headers and rows
+        function renderSummaryTable() {
+            const visibleHeaders = summaryHeaders.filter(header => visibleSummaryColumns.has(header));
+            
+            // Create table header
+            const headerRow = document.getElementById('summaryTableHeader');
+            headerRow.innerHTML = '';
+            
+            // Create table headers with sorting and reordering capabilities
+            visibleHeaders.forEach(header => {
+                const th = document.createElement('th');
+                th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider resizable-th';
+                th.dataset.column = header;
+                
+                // Set width from saved columnWidths if available
+                if (summaryColumnWidths[header]) {
+                    th.style.width = summaryColumnWidths[header];
+                }
+                
+                // Create header content with sort icon
+                const headerContent = document.createElement('div');
+                headerContent.className = 'flex items-center cursor-pointer';
+                
+                // Translate headers for display
+                let displayHeader = header;
+                switch(header) {
+                    case 'employeeName': displayHeader = 'اسم الموظف'; break;
+                    case 'workingDays': displayHeader = 'أيام العمل'; break;
+                    case 'totalHours': displayHeader = 'إجمالي الساعات'; break;
+                    case 'regularHours': displayHeader = 'الساعات العادية'; break;
+                    case 'overtimeHours': displayHeader = 'الساعات الإضافية'; break;
+                    case 'hourlyRate': displayHeader = 'معدل الساعة'; break;
+                    case 'regularPay': displayHeader = 'الأجر العادي'; break;
+                    case 'overtimePay': displayHeader = 'أجر العمل الإضافي'; break;
+                    case 'totalSalary': displayHeader = 'إجمالي الراتب'; break;
+                }
+                
+                headerContent.textContent = displayHeader;
+                
+                // Add sort icon if this column is sorted
+                if (summaryTableSortConfig.column === header) {
+                    const sortIcon = document.createElement('span');
+                    sortIcon.className = `table-sort-icon ${summaryTableSortConfig.direction}`;
+                    headerContent.appendChild(sortIcon);
+                }
+                
+                // Add sorting functionality
+                headerContent.addEventListener('click', () => {
+                    // Update sort configuration
+                    if (summaryTableSortConfig.column === header) {
+                        // Toggle direction if clicking the same column
+                        summaryTableSortConfig.direction = summaryTableSortConfig.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        // Set new column and default to ascending
+                        summaryTableSortConfig.column = header;
+                        summaryTableSortConfig.direction = 'asc';
+                    }
+                    
+                    // Sort and re-render the table
+                    sortSummaryData();
+                    renderSummaryTable();
+                });
+                
+                th.appendChild(headerContent);
+                headerRow.appendChild(th);
+            });
+            
+            // Make headers draggable for reordering
+            if (summarySortable) {
+                summarySortable.destroy();
+            }
+            
+            summarySortable = new Sortable(headerRow, {
+                animation: 150,
+                handle: 'th',
+                draggable: 'th',
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'dragging',
+                onEnd: function() {
+                    // Re-order headers array based on current DOM order
+                    const newHeaders = [];
+                    headerRow.querySelectorAll('th').forEach(th => {
+                        const column = th.dataset.column;
+                        newHeaders.push(column);
+                    });
+                    
+                    // Update headers with the subset of visible columns in their new order
+                    const remaining = summaryHeaders.filter(h => !visibleSummaryColumns.has(h));
+                    summaryHeaders = [...newHeaders, ...remaining];
+                    
+                    // Re-render the table
+                    renderSummaryTable();
+                }
+            });
+            
+            // Make columns resizable
+            headerRow.querySelectorAll('th').forEach(th => {
+                th.addEventListener('mousedown', function(e) {
+                    // Only handle resize if clicked near the right edge
+                    const rect = th.getBoundingClientRect();
+                    const isRTL = document.dir === 'rtl';
+                    const edge = isRTL ? 'left' : 'right';
+                    const edgePos = isRTL ? rect.left : rect.right;
+                    const isEdge = isRTL 
+                        ? (e.clientX - edgePos < 5) 
+                        : (edgePos - e.clientX < 5);
+                    
+                    if (!isEdge) return;
+                    
+                    e.preventDefault();
+                    
+                    const startX = e.clientX;
+                    const startWidth = th.offsetWidth;
+                    const column = th.dataset.column;
+                    
+                    function handleMouseMove(e) {
+                        const width = isRTL 
+                            ? startWidth - (e.clientX - startX)
+                            : startWidth + (e.clientX - startX);
+                        
+                        if (width > 50) {
+                            th.style.width = `${width}px`;
+                            summaryColumnWidths[column] = `${width}px`;
                         }
                     }
                     
@@ -767,10 +1902,10 @@
             });
             
             // Create table body
-            const tableBody = document.getElementById('tableBody');
+            const tableBody = document.getElementById('summaryTableBody');
             tableBody.innerHTML = '';
             
-            fetchedData.forEach((item, index) => {
+            processedData.forEach((item, index) => {
                 const row = document.createElement('tr');
                 
                 // Apply alternating row colors if enabled
@@ -786,19 +1921,35 @@
                     
                     // Format cell value based on type
                     let value = item[header];
-                    if (value === undefined) {
+                    
+                    // Apply special formatting for currency fields
+                    if (header === 'regularPay' || header === 'overtimePay' || header === 'totalSalary') {
+                        const currency = item.currency || document.getElementById('currency').value;
+                        if (value !== undefined && value !== null) {
+                            td.textContent = `${currency}${parseFloat(value).toFixed(2)}`;
+                        } else {
+                            td.textContent = '';
+                        }
+                    } else if (header === 'hourlyRate') {
+                        const currency = item.currency || document.getElementById('currency').value;
+                        if (value !== undefined && value !== null) {
+                            td.textContent = `${currency}${parseFloat(value).toFixed(2)}`;
+                        } else {
+                            td.textContent = '';
+                        }
+                    } else if (header === 'totalHours' || header === 'regularHours' || header === 'overtimeHours') {
+                        // Format hours with 2 decimal places
+                        if (value !== undefined && value !== null) {
+                            td.textContent = parseFloat(value).toFixed(2);
+                        } else {
+                            td.textContent = '';
+                        }
+                    } else if (header === 'workingDays') {
+                        td.textContent = value;
+                    } else if (value === undefined) {
                         td.textContent = '';
                     } else if (value === null) {
-                        td.textContent = 'null';
-                    } else if (typeof value === 'object') {
-                        if (value instanceof Date) {
-                            td.textContent = value.toISOString();
-                        } else if (value.toDate && typeof value.toDate === 'function') {
-                            // Handle Firestore Timestamp
-                            td.textContent = value.toDate().toISOString();
-                        } else {
-                            td.textContent = JSON.stringify(value);
-                        }
+                        td.textContent = '-';
                     } else {
                         td.textContent = value.toString();
                     }
@@ -806,16 +1957,33 @@
                     row.appendChild(td);
                 });
                 
+                // Add a click handler to show details for this employee
+                row.style.cursor = 'pointer';
+                row.addEventListener('click', () => {
+                    // Switch to detailed view
+                    switchView('detailed');
+                    
+                    // Select the employee in the dropdown
+                    document.getElementById('employeeSelector').value = item.employeeId;
+                    
+                    // Trigger the change event to load the detailed data
+                    const event = new Event('change');
+                    document.getElementById('employeeSelector').dispatchEvent(event);
+                });
+                
                 tableBody.appendChild(row);
             });
+            
+            // Update row count
+            document.getElementById('summaryRowCount').textContent = processedData.length;
         }
 
-        // Sort the data based on sortConfig
-        function sortData() {
-            const { column, direction } = sortConfig;
+        // Sort the summary data based on summaryTableSortConfig
+        function sortSummaryData() {
+            const { column, direction } = summaryTableSortConfig;
             
             if (column) {
-                fetchedData.sort((a, b) => {
+                processedData.sort((a, b) => {
                     const aValue = a[column];
                     const bValue = b[column];
                     
@@ -834,9 +2002,6 @@
                         comparison = -1;
                     } else if (bValue === null) {
                         comparison = 1;
-                    } else if (typeof aValue === 'object' && aValue.toDate && typeof aValue.toDate === 'function') {
-                        // Firestore timestamps
-                        comparison = aValue.toDate().getTime() - bValue.toDate().getTime();
                     } else if (typeof aValue === 'number' && typeof bValue === 'number') {
                         comparison = aValue - bValue;
                     } else {
@@ -853,64 +2018,207 @@
 
         // Export to Excel
         document.getElementById('exportExcel').addEventListener('click', () => {
-            if (fetchedData.length === 0) {
-                alert('No data to export');
+            if (processedData.length === 0) {
+                alert('لا توجد بيانات للتصدير');
                 return;
             }
             
             try {
-                // Get visible headers for export
-                const visibleHeaders = headers.filter(header => visibleColumns.has(header));
-                
-                // Prepare worksheet data with only visible columns
-                const ws_data = [visibleHeaders];
-                
-                fetchedData.forEach(item => {
-                    const row = [];
-                    visibleHeaders.forEach(header => {
-                        let value = item[header];
-                        
-                        // Format value for Excel
-                        if (value === undefined) {
-                            value = '';
-                        } else if (value === null) {
-                            value = 'null';
-                        } else if (typeof value === 'object') {
-                            if (value instanceof Date) {
-                                value = value.toISOString();
-                            } else if (value.toDate && typeof value.toDate === 'function') {
-                                // Handle Firestore Timestamp
-                                value = value.toDate().toISOString();
-                            } else {
-                                value = JSON.stringify(value);
-                            }
-                        }
-                        
-                        row.push(value);
-                    });
-                    
-                    ws_data.push(row);
-                });
-                
-                // Create worksheet and workbook
-                const ws = XLSX.utils.aoa_to_sheet(ws_data);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'FirestoreData');
-                
-                // Generate filename
-                const collectionPath = document.getElementById('collectionPath').value;
-                const documentId = document.getElementById('documentId').value.trim();
-                const filename = documentId 
-                    ? `${collectionPath}_${documentId}.xlsx` 
-                    : `${collectionPath}_data.xlsx`;
-                
-                // Export to file
-                XLSX.writeFile(wb, filename);
-                
+                // Determine which report to export based on current view
+                if (currentView === 'summary') {
+                    exportSummaryReport();
+                } else {
+                    const employeeId = document.getElementById('employeeSelector').value;
+                    if (employeeId) {
+                        exportDetailedReport(employeeId);
+                    } else {
+                        alert('يرجى اختيار موظف لتصدير تقريره التفصيلي');
+                    }
+                }
             } catch (error) {
-                alert(`Error exporting to Excel: ${error.message}`);
+                alert(`خطأ في التصدير إلى Excel: ${error.message}`);
             }
         });
+        
+        // Export summary report to Excel
+        function exportSummaryReport() {
+            // Get visible headers for export
+            const visibleHeaders = summaryHeaders.filter(header => visibleSummaryColumns.has(header));
+            
+            // Prepare header translations
+            const headerTranslations = {
+                'employeeName': 'اسم الموظف',
+                'workingDays': 'أيام العمل',
+                'totalHours': 'إجمالي الساعات',
+                'regularHours': 'الساعات العادية',
+                'overtimeHours': 'الساعات الإضافية',
+                'hourlyRate': 'معدل الساعة',
+                'regularPay': 'الأجر العادي',
+                'overtimePay': 'أجر العمل الإضافي',
+                'totalSalary': 'إجمالي الراتب'
+            };
+            
+            // Prepare worksheet data with only visible columns
+            const headerRow = visibleHeaders.map(header => headerTranslations[header] || header);
+            const ws_data = [headerRow];
+            
+            processedData.forEach(item => {
+                const row = [];
+                visibleHeaders.forEach(header => {
+                    let value = item[header];
+                    
+                    // Format value for Excel
+                    if (header === 'regularPay' || header === 'overtimePay' || header === 'totalSalary' || header === 'hourlyRate') {
+                        if (value !== undefined && value !== null) {
+                            value = parseFloat(value);
+                        }
+                    } else if (header === 'totalHours' || header === 'regularHours' || header === 'overtimeHours') {
+                        if (value !== undefined && value !== null) {
+                            value = parseFloat(value);
+                        }
+                    } else if (value === undefined) {
+                        value = '';
+                    } else if (value === null) {
+                        value = '';
+                    }
+                    
+                    row.push(value);
+                });
+                
+                ws_data.push(row);
+            });
+            
+            // Create worksheet and workbook
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'تقرير_الرواتب');
+            
+            // Generate filename with date
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0];
+            const filename = `تقرير_الرواتب_${dateStr}.xlsx`;
+            
+            // Export to file
+            XLSX.writeFile(wb, filename);
+        }
+        
+        // Export detailed report for a specific employee
+        function exportDetailedReport(employeeId) {
+            const employee = employeeDetails[employeeId];
+            if (!employee) {
+                alert('لم يتم العثور على بيانات الموظف');
+                return;
+            }
+            
+            // Prepare header translations
+            const headerTranslations = {
+                'date': 'التاريخ',
+                'day': 'اليوم',
+                'checkInTime': 'وقت الحضور',
+                'checkOutTime': 'وقت الانصراف',
+                'hours': 'الساعات',
+                'regularHours': 'الساعات العادية',
+                'overtimeHours': 'الساعات الإضافية',
+                'dailyPay': 'الأجر اليومي'
+            };
+            
+            // Create workbook with two worksheets
+            const wb = XLSX.utils.book_new();
+            
+            // Prepare employee summary data for the first worksheet
+            const summaryData = [
+                ['اسم الموظف', employee.employeeName],
+                ['معدل الساعة', `${employee.currency}${employee.hourlyRate}`],
+                ['ساعات العمل القياسية', employee.standardHoursPerDay],
+                ['إجمالي أيام العمل', employee.totalSummary.workingDays],
+                ['إجمالي الساعات', employee.totalSummary.totalHours],
+                ['الساعات العادية', employee.totalSummary.regularHours],
+                ['الساعات الإضافية', employee.totalSummary.overtimeHours],
+                ['الأجر العادي', `${employee.currency}${employee.totalSummary.regularPay}`],
+                ['أجر العمل الإضافي', `${employee.currency}${employee.totalSummary.overtimePay}`],
+                ['إجمالي الراتب', `${employee.currency}${employee.totalSummary.totalSalary}`]
+            ];
+            
+            // Create summary worksheet
+            const ws_summary = XLSX.utils.aoa_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, ws_summary, 'ملخص_الموظف');
+            
+            // Prepare detailed attendance data
+            const detailedHeaders = ['date', 'day', 'checkInTime', 'checkOutTime', 'hours', 'regularHours', 'overtimeHours', 'dailyPay'];
+            const headerRow = detailedHeaders.map(header => headerTranslations[header] || header);
+            
+            const detailedData = [headerRow];
+            
+            // Sort records by date
+            const sortedRecords = [...employee.attendanceRecords].sort((a, b) => {
+                return new Date(a.date) - new Date(b.date);
+            });
+            
+            // Add all records
+            sortedRecords.forEach(record => {
+                const row = [];
+                detailedHeaders.forEach(header => {
+                    let value = record[header];
+                    
+                    // Format specific fields
+                    if (header === 'dailyPay') {
+                        value = parseFloat(value);
+                    } else if (header === 'hours' || header === 'regularHours' || header === 'overtimeHours') {
+                        value = parseFloat(value);
+                    } else if (value === undefined || value === null) {
+                        value = '';
+                    }
+                    
+                    row.push(value);
+                });
+                detailedData.push(row);
+            });
+            
+            // Add a summary row
+            const summaryRow = [];
+            detailedHeaders.forEach(header => {
+                let value = '';
+                
+                switch (header) {
+                    case 'date':
+                        value = 'الإجمالي';
+                        break;
+                    case 'day':
+                        value = `${employee.totalSummary.workingDays} يوم`;
+                        break;
+                    case 'hours':
+                        value = employee.totalSummary.totalHours;
+                        break;
+                    case 'regularHours':
+                        value = employee.totalSummary.regularHours;
+                        break;
+                    case 'overtimeHours':
+                        value = employee.totalSummary.overtimeHours;
+                        break;
+                    case 'dailyPay':
+                        value = employee.totalSummary.totalSalary;
+                        break;
+                    default:
+                        value = '';
+                }
+                
+                summaryRow.push(value);
+            });
+            detailedData.push(summaryRow);
+            
+            // Create detailed worksheet
+            const ws_detailed = XLSX.utils.aoa_to_sheet(detailedData);
+            XLSX.utils.book_append_sheet(wb, ws_detailed, 'سجلات_الحضور');
+            
+            // Generate filename
+            const employeeName = employee.employeeName.replace(/\s+/g, '_');
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0];
+            const filename = `تقرير_الموظف_${employeeName}_${dateStr}.xlsx`;
+            
+            // Export to file
+            XLSX.writeFile(wb, filename);
+        }
     </script>
 </body>
 </html>
