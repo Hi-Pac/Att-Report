@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase to Excel Exporter</title>
+    <title>Employee Salary Report Generator</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -90,7 +90,7 @@
 </head>
 <body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
     <div class="container mx-auto p-4 max-w-6xl">
-        <h1 class="text-3xl font-bold text-center mb-8 text-primary dark:text-primary">Firebase to Excel Exporter</h1>
+        <h1 class="text-3xl font-bold text-center mb-8 text-primary dark:text-primary">Employee Salary Report Generator</h1>
         
         <!-- Step 1: Firebase Config (Hidden) -->
         <div id="step1" class="hidden">
@@ -125,28 +125,74 @@
             </div>
         </div>
 
-        <!-- Step 3: Query Configuration -->
+        <!-- Step 3: Query Configuration and Salary Settings -->
         <div id="step3" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
-            <h2 class="text-xl font-semibold mb-4">Step 3: Firestore Query</h2>
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium">Collection Path</label>
-                <input id="collectionPath" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Collection path (e.g., attendance)" value="attendance">
+            <h2 class="text-xl font-semibold mb-4">Step 3: Data Query and Salary Settings</h2>
+            
+            <!-- Data Query Section -->
+            <div class="mb-6 border-b dark:border-gray-700 pb-4">
+                <h3 class="text-lg font-medium mb-3">Attendance Data Query</h3>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Collection Path</label>
+                    <input id="collectionPath" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Collection path (e.g., attendance)" value="attendance">
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Document ID (Optional)</label>
+                    <input id="documentId" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Document ID (leave blank to get all)" value="1BUulOjoUiPuxQloMec9">
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Limit</label>
+                    <input id="limit" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Limit (default: 100)" value="100">
+                </div>
             </div>
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium">Document ID (Optional)</label>
-                <input id="documentId" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Document ID (leave blank to get all)" value="1BUulOjoUiPuxQloMec9">
+            
+            <!-- Salary Settings Section -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-3">Salary Settings</h3>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Default Hourly Rate</label>
+                    <div class="flex">
+                        <input id="defaultHourlyRate" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Default hourly rate for all employees" value="15">
+                        <select id="currency" class="ml-2 px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <option value="$">$ (USD)</option>
+                            <option value="€">€ (EUR)</option>
+                            <option value="£">£ (GBP)</option>
+                            <option value="¥">¥ (JPY)</option>
+                            <option value="₹">₹ (INR)</option>
+                            <option value="د.إ">د.إ (AED)</option>
+                            <option value="﷼">﷼ (SAR)</option>
+                            <option value="ر.س">ر.س (SAR)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Overtime Multiplier</label>
+                    <input id="overtimeMultiplier" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Multiplier for overtime hours (e.g., 1.5)" value="1.5" step="0.1" min="1">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Standard Hours Per Day</label>
+                    <input id="standardHoursPerDay" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Standard working hours per day" value="8" step="0.5" min="1">
+                </div>
+                
+                <!-- Employee-Specific Rates (Optional) -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between">
+                        <label class="block mb-2 text-sm font-medium">Employee-Specific Rates (Optional)</label>
+                        <button id="addEmployeeRate" class="px-3 py-1 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all text-sm">+ Add Employee</button>
+                    </div>
+                    <div id="employeeRatesContainer" class="space-y-2 mt-2"></div>
+                </div>
             </div>
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium">Limit</label>
-                <input id="limit" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Limit (default: 100)" value="100">
-            </div>
-            <button id="fetchData" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">Fetch Data</button>
+            
+            <button id="fetchData" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">Generate Salary Report</button>
         </div>
 
         <!-- Step 4: Results and Export -->
         <div id="step4" class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
             <div class="flex flex-wrap justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold">Step 4: Results</h2>
+                <h2 class="text-xl font-semibold">Salary Report</h2>
                 <div class="flex flex-wrap gap-2 mt-2 sm:mt-0">
                     <div class="relative">
                         <button id="tableOptionsBtn" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
@@ -190,6 +236,25 @@
                 </div>
             </div>
             
+            <!-- Report summary -->
+            <div id="reportSummary" class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-md hidden">
+                <h3 class="font-medium mb-2">Report Summary</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total Employees</p>
+                        <p id="totalEmployees" class="text-xl font-semibold">0</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total Work Hours</p>
+                        <p id="totalHours" class="text-xl font-semibold">0</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total Salary</p>
+                        <p id="totalSalary" class="text-xl font-semibold">0</p>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Column toggle panel -->
             <div id="columnTogglePanel" class="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-md hidden">
                 <h3 class="text-sm font-semibold mb-2">Toggle Column Visibility</h3>
@@ -198,7 +263,7 @@
             
             <div id="loadingData" class="flex flex-col items-center py-10 hidden">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p class="mt-4">Loading data...</p>
+                <p class="mt-4">Processing data...</p>
             </div>
             
             <div id="tableContainer" class="hidden">
@@ -211,12 +276,12 @@
                     </table>
                 </div>
                 <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span id="rowCount">0</span> rows found.
+                    <span id="rowCount">0</span> employees found.
                 </div>
             </div>
             
             <div id="noDataMessage" class="py-10 text-center hidden">
-                <p>No data found. Please check your query parameters.</p>
+                <p>No attendance data found. Please check your query parameters.</p>
             </div>
         </div>
     </div>
@@ -250,17 +315,20 @@
         let firebaseApp;
         let db;
         let fetchedData = [];
+        let processedData = []; // For storing calculated salary data
         let headers = [];
         let visibleColumns = new Set();
         let sortConfig = { column: null, direction: 'asc' };
         let columnWidths = {};
         let sortable; // SortableJS instance for reordering columns
+        let employeeRates = {}; // Store custom rates for employees
 
         // Auto-configure Firebase on page load
         document.addEventListener('DOMContentLoaded', () => {
             configureFirebase();
             setupTableOptions();
             setDirection();
+            setupEmployeeRates();
         });
 
         function configureFirebase() {
@@ -314,6 +382,49 @@
             } catch (error) {
                 alert(`Error initializing Firebase: ${error.message}`);
             }
+        }
+
+        function setupEmployeeRates() {
+            // Setup add employee rate button
+            document.getElementById('addEmployeeRate').addEventListener('click', () => {
+                const container = document.getElementById('employeeRatesContainer');
+                const index = container.children.length;
+                
+                const employeeRateRow = document.createElement('div');
+                employeeRateRow.className = 'flex items-center space-x-2';
+                employeeRateRow.innerHTML = `
+                    <input type="text" placeholder="Employee ID or Name" class="employee-id px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-grow">
+                    <input type="number" placeholder="Hourly Rate" class="employee-rate px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white w-32" step="0.01" min="0">
+                    <button class="remove-rate px-2 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-all">×</button>
+                `;
+                
+                const removeBtn = employeeRateRow.querySelector('.remove-rate');
+                removeBtn.addEventListener('click', () => {
+                    employeeRateRow.remove();
+                    updateEmployeeRatesObject();
+                });
+                
+                const inputs = employeeRateRow.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.addEventListener('input', updateEmployeeRatesObject);
+                });
+                
+                container.appendChild(employeeRateRow);
+            });
+        }
+        
+        function updateEmployeeRatesObject() {
+            employeeRates = {};
+            const rows = document.querySelectorAll('#employeeRatesContainer > div');
+            
+            rows.forEach(row => {
+                const employeeId = row.querySelector('.employee-id').value.trim();
+                const rate = parseFloat(row.querySelector('.employee-rate').value);
+                
+                if (employeeId && !isNaN(rate)) {
+                    employeeRates[employeeId] = rate;
+                }
+            });
         }
 
         function setupTableOptions() {
@@ -420,7 +531,7 @@
             firebase.auth().signOut();
         });
 
-        // Step 3: Fetch Data
+        // Step 3: Fetch Data and Generate Salary Report
         document.getElementById('fetchData').addEventListener('click', async () => {
             const collectionPath = document.getElementById('collectionPath').value;
             const documentId = document.getElementById('documentId').value.trim();
@@ -431,6 +542,9 @@
                 return;
             }
             
+            // Update employee rates object before processing
+            updateEmployeeRatesObject();
+            
             // Show loading state
             document.getElementById('step4').classList.remove('hidden');
             document.getElementById('loadingData').classList.remove('hidden');
@@ -438,6 +552,7 @@
             document.getElementById('noDataMessage').classList.add('hidden');
             document.getElementById('exportExcel').classList.add('hidden');
             document.getElementById('columnTogglePanel').classList.add('hidden');
+            document.getElementById('reportSummary').classList.add('hidden');
             
             try {
                 // Try different approaches to get the data
@@ -566,7 +681,7 @@
                     }
                 }
                 
-                // Process and display the fetched data
+                // Process attendance data and calculate salary
                 document.getElementById('loadingData').classList.add('hidden');
                 
                 if (fetchedData.length === 0) {
@@ -574,18 +689,25 @@
                     return;
                 }
                 
-                // Update row count
-                document.getElementById('rowCount').textContent = fetchedData.length;
+                // Process data to calculate work hours and salary
+                processAttendanceData();
                 
-                // Extract all possible headers from all documents
-                headers = ['id'];
-                fetchedData.forEach(item => {
+                // Update row count
+                document.getElementById('rowCount').textContent = processedData.length;
+                
+                // Extract all possible headers from processed data
+                headers = [];
+                processedData.forEach(item => {
                     Object.keys(item).forEach(key => {
-                        if (key !== 'id' && !headers.includes(key)) {
+                        if (!headers.includes(key)) {
                             headers.push(key);
                         }
                     });
                 });
+                
+                // Reorder headers to show important salary info first
+                const priorityHeaders = ['employeeId', 'employeeName', 'totalHours', 'regularHours', 'overtimeHours', 'hourlyRate', 'regularPay', 'overtimePay', 'totalSalary'];
+                headers = priorityHeaders.filter(h => headers.includes(h)).concat(headers.filter(h => !priorityHeaders.includes(h)));
                 
                 // Initialize visibleColumns with all headers
                 visibleColumns = new Set(headers);
@@ -596,9 +718,13 @@
                 // Create and display the table
                 renderTable();
                 
-                // Show table and export button
+                // Update summary information
+                updateReportSummary();
+                
+                // Show table, summary and export button
                 document.getElementById('tableContainer').classList.remove('hidden');
                 document.getElementById('exportExcel').classList.remove('hidden');
+                document.getElementById('reportSummary').classList.remove('hidden');
                 
                 // Apply table settings
                 applyTableSettings();
@@ -608,6 +734,254 @@
                 alert(`Error fetching data: ${error.message}`);
             }
         });
+
+        // Process attendance data to calculate hours and salary
+        function processAttendanceData() {
+            console.log("Processing attendance data for salary calculation");
+            
+            // Get salary configuration
+            const defaultHourlyRate = parseFloat(document.getElementById('defaultHourlyRate').value) || 15;
+            const overtimeMultiplier = parseFloat(document.getElementById('overtimeMultiplier').value) || 1.5;
+            const standardHoursPerDay = parseFloat(document.getElementById('standardHoursPerDay').value) || 8;
+            const currency = document.getElementById('currency').value;
+            
+            // First, group data by employee
+            const employeeAttendanceMap = new Map();
+            
+            fetchedData.forEach(record => {
+                // Determine employee ID - this depends on your data structure
+                // Look for common employee identifier fields
+                let employeeId = null;
+                let employeeName = null;
+                
+                // Try to find employee identifiers in the data
+                if (record.employeeId) employeeId = record.employeeId;
+                else if (record.employee_id) employeeId = record.employee_id;
+                else if (record.userId) employeeId = record.userId;
+                else if (record.user_id) employeeId = record.user_id;
+                
+                if (record.employeeName) employeeName = record.employeeName;
+                else if (record.employee_name) employeeName = record.employee_name;
+                else if (record.name) employeeName = record.name;
+                else if (record.userName) employeeName = record.userName;
+                else if (record.user_name) employeeName = record.user_name;
+                
+                // If we couldn't find an employee ID, try to use the name or other fields
+                if (!employeeId) {
+                    if (employeeName) employeeId = employeeName;
+                    else if (record.id) employeeId = record.id;
+                    else employeeId = 'unknown';
+                }
+                
+                // Ensure we have a name, even if it's just the ID
+                if (!employeeName) {
+                    employeeName = employeeId;
+                }
+                
+                // Extract check-in and check-out timestamps
+                let checkIn = null;
+                let checkOut = null;
+                
+                // Try to find timestamp fields
+                if (record.checkIn || record.check_in || record.timeIn || record.time_in || record.startTime || record.start_time) {
+                    checkIn = record.checkIn || record.check_in || record.timeIn || record.time_in || record.startTime || record.start_time;
+                }
+                
+                if (record.checkOut || record.check_out || record.timeOut || record.time_out || record.endTime || record.end_time) {
+                    checkOut = record.checkOut || record.check_out || record.timeOut || record.time_out || record.endTime || record.end_time;
+                }
+                
+                // If we have date fields but no timestamp, try to use those
+                if (!checkIn && record.date) {
+                    checkIn = record.date;
+                }
+                
+                // Convert Firestore timestamps to Date objects if needed
+                if (checkIn && typeof checkIn === 'object' && checkIn.toDate) {
+                    checkIn = checkIn.toDate();
+                }
+                
+                if (checkOut && typeof checkOut === 'object' && checkOut.toDate) {
+                    checkOut = checkOut.toDate();
+                }
+                
+                // If we have date strings, convert them to Date objects
+                if (checkIn && typeof checkIn === 'string') {
+                    checkIn = new Date(checkIn);
+                }
+                
+                if (checkOut && typeof checkOut === 'string') {
+                    checkOut = new Date(checkOut);
+                }
+                
+                // Look for duration fields if we don't have check-in/check-out times
+                let hours = null;
+                if (!checkIn || !checkOut) {
+                    if (record.hours !== undefined) hours = record.hours;
+                    else if (record.duration !== undefined) hours = record.duration;
+                    else if (record.work_hours !== undefined) hours = record.work_hours;
+                    else if (record.workHours !== undefined) hours = record.workHours;
+                }
+                
+                // Calculate hours worked if we have check-in and check-out
+                if (!hours && checkIn && checkOut) {
+                    // Calculate hours as the difference between timestamps in hours
+                    const diffMs = checkOut.getTime() - checkIn.getTime();
+                    hours = diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
+                }
+                
+                // If hours is still null, set a default value
+                if (hours === null) {
+                    hours = 0;
+                }
+                
+                // If hours is not a number, try to parse it
+                if (typeof hours === 'string') {
+                    hours = parseFloat(hours) || 0;
+                }
+                
+                // Ensure hours is a valid number
+                hours = Math.max(0, hours);
+                
+                // Get the record date for grouping by day
+                let recordDate = null;
+                if (checkIn) {
+                    recordDate = new Date(checkIn);
+                    recordDate.setHours(0, 0, 0, 0); // Normalize to start of day
+                } else if (record.date) {
+                    // If we have a date field but no check-in
+                    if (typeof record.date === 'object' && record.date.toDate) {
+                        recordDate = record.date.toDate();
+                    } else if (typeof record.date === 'string') {
+                        recordDate = new Date(record.date);
+                    } else {
+                        recordDate = record.date;
+                    }
+                    
+                    if (recordDate instanceof Date) {
+                        recordDate.setHours(0, 0, 0, 0);
+                    }
+                } else {
+                    // If we have no date information, use the current date
+                    recordDate = new Date();
+                    recordDate.setHours(0, 0, 0, 0);
+                }
+                
+                // Store the attendance record grouped by employee and date
+                if (!employeeAttendanceMap.has(employeeId)) {
+                    employeeAttendanceMap.set(employeeId, {
+                        employeeId: employeeId,
+                        employeeName: employeeName,
+                        attendanceByDate: new Map()
+                    });
+                }
+                
+                const employee = employeeAttendanceMap.get(employeeId);
+                
+                // Group by date string for easy lookup
+                const dateString = recordDate instanceof Date ? recordDate.toISOString().split('T')[0] : 'unknown';
+                
+                if (!employee.attendanceByDate.has(dateString)) {
+                    employee.attendanceByDate.set(dateString, {
+                        date: dateString,
+                        totalHours: 0,
+                        records: []
+                    });
+                }
+                
+                const dayAttendance = employee.attendanceByDate.get(dateString);
+                dayAttendance.totalHours += hours;
+                dayAttendance.records.push({
+                    checkIn: checkIn,
+                    checkOut: checkOut,
+                    hours: hours,
+                    rawRecord: record
+                });
+            });
+            
+            // Now calculate salary for each employee
+            processedData = [];
+            
+            employeeAttendanceMap.forEach((employee, employeeId) => {
+                // Calculate total hours for the employee
+                let totalHours = 0;
+                let regularHours = 0;
+                let overtimeHours = 0;
+                
+                // Store attendance data by date for details
+                const attendanceDetails = [];
+                
+                employee.attendanceByDate.forEach((dayData, dateString) => {
+                    // Calculate regular and overtime hours for this day
+                    const dayRegularHours = Math.min(dayData.totalHours, standardHoursPerDay);
+                    const dayOvertimeHours = Math.max(0, dayData.totalHours - standardHoursPerDay);
+                    
+                    regularHours += dayRegularHours;
+                    overtimeHours += dayOvertimeHours;
+                    totalHours += dayData.totalHours;
+                    
+                    // Store detailed attendance for this day
+                    attendanceDetails.push({
+                        date: dateString,
+                        totalHours: dayData.totalHours,
+                        regularHours: dayRegularHours,
+                        overtimeHours: dayOvertimeHours,
+                        records: dayData.records
+                    });
+                });
+                
+                // Get hourly rate for this employee (use custom rate if available)
+                let hourlyRate = defaultHourlyRate;
+                if (employeeRates[employeeId]) {
+                    hourlyRate = employeeRates[employeeId];
+                } else if (employeeRates[employee.employeeName]) {
+                    hourlyRate = employeeRates[employee.employeeName];
+                }
+                
+                // Calculate pay
+                const regularPay = regularHours * hourlyRate;
+                const overtimePay = overtimeHours * hourlyRate * overtimeMultiplier;
+                const totalSalary = regularPay + overtimePay;
+                
+                // Create the employee salary record
+                processedData.push({
+                    employeeId: employeeId,
+                    employeeName: employee.employeeName,
+                    totalHours: parseFloat(totalHours.toFixed(2)),
+                    regularHours: parseFloat(regularHours.toFixed(2)),
+                    overtimeHours: parseFloat(overtimeHours.toFixed(2)),
+                    hourlyRate: parseFloat(hourlyRate.toFixed(2)),
+                    regularPay: parseFloat(regularPay.toFixed(2)),
+                    overtimePay: parseFloat(overtimePay.toFixed(2)),
+                    totalSalary: parseFloat(totalSalary.toFixed(2)),
+                    formattedRegularPay: `${currency}${regularPay.toFixed(2)}`,
+                    formattedOvertimePay: `${currency}${overtimePay.toFixed(2)}`,
+                    formattedTotalSalary: `${currency}${totalSalary.toFixed(2)}`,
+                    attendanceDetails: attendanceDetails,
+                    currency: currency
+                });
+            });
+            
+            console.log(`Processed ${processedData.length} employee salary records`);
+        }
+        
+        // Update report summary information
+        function updateReportSummary() {
+            const totalEmployees = processedData.length;
+            
+            let totalHours = 0;
+            let totalSalaryAmount = 0;
+            const currency = document.getElementById('currency').value;
+            
+            processedData.forEach(employee => {
+                totalHours += employee.totalHours;
+                totalSalaryAmount += employee.totalSalary;
+            });
+            
+            document.getElementById('totalEmployees').textContent = totalEmployees;
+            document.getElementById('totalHours').textContent = totalHours.toFixed(2);
+            document.getElementById('totalSalary').textContent = `${currency}${totalSalaryAmount.toFixed(2)}`;
+        }
 
         // Create column toggle checkboxes
         function createColumnToggles() {
@@ -770,7 +1144,7 @@
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             
-            fetchedData.forEach((item, index) => {
+            processedData.forEach((item, index) => {
                 const row = document.createElement('tr');
                 
                 // Apply alternating row colors if enabled
@@ -786,10 +1160,40 @@
                     
                     // Format cell value based on type
                     let value = item[header];
-                    if (value === undefined) {
+                    
+                    // Apply special formatting for currency fields
+                    if (header === 'regularPay' || header === 'overtimePay' || header === 'totalSalary') {
+                        const currency = item.currency || document.getElementById('currency').value;
+                        if (value !== undefined && value !== null) {
+                            td.textContent = `${currency}${parseFloat(value).toFixed(2)}`;
+                        } else {
+                            td.textContent = '';
+                        }
+                    } else if (header === 'hourlyRate') {
+                        const currency = item.currency || document.getElementById('currency').value;
+                        if (value !== undefined && value !== null) {
+                            td.textContent = `${currency}${parseFloat(value).toFixed(2)}`;
+                        } else {
+                            td.textContent = '';
+                        }
+                    } else if (header === 'totalHours' || header === 'regularHours' || header === 'overtimeHours') {
+                        // Format hours with 2 decimal places
+                        if (value !== undefined && value !== null) {
+                            td.textContent = parseFloat(value).toFixed(2);
+                        } else {
+                            td.textContent = '';
+                        }
+                    } else if (value === undefined) {
                         td.textContent = '';
                     } else if (value === null) {
                         td.textContent = 'null';
+                    } else if (header === 'attendanceDetails') {
+                        // For attendance details, show a summary instead of the raw data
+                        if (Array.isArray(value)) {
+                            td.textContent = `${value.length} day(s)`;
+                        } else {
+                            td.textContent = JSON.stringify(value);
+                        }
                     } else if (typeof value === 'object') {
                         if (value instanceof Date) {
                             td.textContent = value.toISOString();
@@ -815,7 +1219,7 @@
             const { column, direction } = sortConfig;
             
             if (column) {
-                fetchedData.sort((a, b) => {
+                processedData.sort((a, b) => {
                     const aValue = a[column];
                     const bValue = b[column];
                     
@@ -853,19 +1257,21 @@
 
         // Export to Excel
         document.getElementById('exportExcel').addEventListener('click', () => {
-            if (fetchedData.length === 0) {
+            if (processedData.length === 0) {
                 alert('No data to export');
                 return;
             }
             
             try {
-                // Get visible headers for export
-                const visibleHeaders = headers.filter(header => visibleColumns.has(header));
+                // Get visible headers for export, excluding complex objects like attendanceDetails
+                const visibleHeaders = headers.filter(header => 
+                    visibleColumns.has(header) && header !== 'attendanceDetails'
+                );
                 
                 // Prepare worksheet data with only visible columns
                 const ws_data = [visibleHeaders];
                 
-                fetchedData.forEach(item => {
+                processedData.forEach(item => {
                     const row = [];
                     visibleHeaders.forEach(header => {
                         let value = item[header];
@@ -895,14 +1301,12 @@
                 // Create worksheet and workbook
                 const ws = XLSX.utils.aoa_to_sheet(ws_data);
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'FirestoreData');
+                XLSX.utils.book_append_sheet(wb, ws, 'SalaryReport');
                 
-                // Generate filename
-                const collectionPath = document.getElementById('collectionPath').value;
-                const documentId = document.getElementById('documentId').value.trim();
-                const filename = documentId 
-                    ? `${collectionPath}_${documentId}.xlsx` 
-                    : `${collectionPath}_data.xlsx`;
+                // Generate filename with date
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0];
+                const filename = `Salary_Report_${dateStr}.xlsx`;
                 
                 // Export to file
                 XLSX.writeFile(wb, filename);
