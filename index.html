@@ -144,6 +144,12 @@
                     <label class="block mb-2 text-sm font-medium">Limit</label>
                     <input id="limit" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Limit (default: 100)" value="100">
                 </div>
+                <div class="mb-4">
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" id="ignoreTimeErrors" class="mr-2" checked>
+                        Ignore invalid time values (recommended for error handling)
+                    </label>
+                </div>
             </div>
             
             <!-- Salary Settings Section -->
@@ -174,6 +180,11 @@
                 <div class="mb-4">
                     <label class="block mb-2 text-sm font-medium">Standard Hours Per Day</label>
                     <input id="standardHoursPerDay" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Standard working hours per day" value="8" step="0.5" min="1">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Default Hours (if time data invalid)</label>
+                    <input id="defaultHours" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Hours to use when time data is missing" value="8" step="0.5" min="0">
                 </div>
                 
                 <!-- Employee-Specific Rates (Optional) -->
@@ -234,6 +245,17 @@
                     <button id="toggleColumns" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all">Toggle Columns</button>
                     <button id="exportExcel" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all hidden">Export to Excel</button>
                 </div>
+            </div>
+            
+            <!-- Errors Panel -->
+            <div id="errorsPanel" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-700 dark:text-red-400 hidden">
+                <h3 class="text-sm font-semibold mb-2 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Warning: Some data processing issues detected
+                </h3>
+                <div id="errorsList" class="text-sm"></div>
             </div>
             
             <!-- Report summary -->
@@ -322,6 +344,7 @@
         let columnWidths = {};
         let sortable; // SortableJS instance for reordering columns
         let employeeRates = {}; // Store custom rates for employees
+        let processingErrors = []; // Track errors during processing
 
         // Auto-configure Firebase on page load
         document.addEventListener('DOMContentLoaded', () => {
@@ -542,6 +565,10 @@
                 return;
             }
             
+            // Reset error tracking
+            processingErrors = [];
+            document.getElementById('errorsPanel').classList.add('hidden');
+            
             // Update employee rates object before processing
             updateEmployeeRatesObject();
             
@@ -726,6 +753,13 @@
                 document.getElementById('exportExcel').classList.remove('hidden');
                 document.getElementById('reportSummary').classList.remove('hidden');
                 
+                // Show errors if any occurred during processing
+                if (processingErrors.length > 0) {
+                    const errorsList = document.getElementById('errorsList');
+                    errorsList.innerHTML = processingErrors.map(err => `<p>• ${err}</p>`).join('');
+                    document.getElementById('errorsPanel').classList.remove('hidden');
+                }
+                
                 // Apply table settings
                 applyTableSettings();
                 
@@ -735,6 +769,90 @@
             }
         });
 
+        // Safe date parsing function to handle invalid dates
+        function safeParseDate(value) {
+            if (!value) return null;
+            
+            try {
+                // If it's already a Date object
+                if (value instanceof Date) {
+                    if (!isNaN(value.getTime())) {
+                        return value;
+                    }
+                    throw new Error("Invalid Date object");
+                }
+                
+                // If it's a Firestore timestamp
+                if (value && typeof value === 'object' && value.toDate && typeof value.toDate === 'function') {
+                    try {
+                        const date = value.toDate();
+                        if (!isNaN(date.getTime())) {
+                            return date;
+                        }
+                        throw new Error("Invalid Firestore timestamp");
+                    } catch (e) {
+                        throw new Error("Failed to convert Firestore timestamp: " + e.message);
+                    }
+                }
+                
+                // If it's a timestamp number (milliseconds since epoch)
+                if (typeof value === 'number') {
+                    const date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                        return date;
+                    }
+                    throw new Error("Invalid numeric timestamp");
+                }
+                
+                // If it's a string date format
+                if (typeof value === 'string') {
+                    // Try parsing with Date constructor
+                    let date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                        return date;
+                    }
+                    
+                    // Try parsing common formats
+                    // Try DD/MM/YYYY
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
+                        const parts = value.split('/');
+                        date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                        if (!isNaN(date.getTime())) {
+                            return date;
+                        }
+                    }
+                    
+                    // Try MM/DD/YYYY
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
+                        const parts = value.split('/');
+                        date = new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
+                        if (!isNaN(date.getTime())) {
+                            return date;
+                        }
+                    }
+                    
+                    // Try YYYY-MM-DD
+                    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(value)) {
+                        const parts = value.split('-');
+                        date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        if (!isNaN(date.getTime())) {
+                            return date;
+                        }
+                    }
+                    
+                    throw new Error(`Could not parse date string: ${value}`);
+                }
+                
+                throw new Error(`Unsupported date format: ${typeof value}`);
+            } catch (error) {
+                const errorMsg = `Date parsing error: ${error.message}`;
+                if (!processingErrors.includes(errorMsg)) {
+                    processingErrors.push(errorMsg);
+                }
+                return null;
+            }
+        }
+
         // Process attendance data to calculate hours and salary
         function processAttendanceData() {
             console.log("Processing attendance data for salary calculation");
@@ -743,10 +861,16 @@
             const defaultHourlyRate = parseFloat(document.getElementById('defaultHourlyRate').value) || 15;
             const overtimeMultiplier = parseFloat(document.getElementById('overtimeMultiplier').value) || 1.5;
             const standardHoursPerDay = parseFloat(document.getElementById('standardHoursPerDay').value) || 8;
+            const defaultHours = parseFloat(document.getElementById('defaultHours').value) || 8;
             const currency = document.getElementById('currency').value;
+            const ignoreTimeErrors = document.getElementById('ignoreTimeErrors').checked;
             
             // First, group data by employee
             const employeeAttendanceMap = new Map();
+            
+            // Check if we should use manual mode if time data is problematic
+            let timeErrorCount = 0;
+            const maxTimeErrorsBeforeManual = 5;
             
             fetchedData.forEach(record => {
                 // Determine employee ID - this depends on your data structure
@@ -759,18 +883,21 @@
                 else if (record.employee_id) employeeId = record.employee_id;
                 else if (record.userId) employeeId = record.userId;
                 else if (record.user_id) employeeId = record.user_id;
+                else if (record.uid) employeeId = record.uid;
+                else if (record.id) employeeId = record.id;
                 
                 if (record.employeeName) employeeName = record.employeeName;
                 else if (record.employee_name) employeeName = record.employee_name;
                 else if (record.name) employeeName = record.name;
                 else if (record.userName) employeeName = record.userName;
                 else if (record.user_name) employeeName = record.user_name;
+                else if (record.fullName) employeeName = record.fullName;
+                else if (record.full_name) employeeName = record.full_name;
                 
                 // If we couldn't find an employee ID, try to use the name or other fields
                 if (!employeeId) {
                     if (employeeName) employeeId = employeeName;
-                    else if (record.id) employeeId = record.id;
-                    else employeeId = 'unknown';
+                    else employeeId = 'employee_' + (Math.floor(Math.random() * 1000) + 1);
                 }
                 
                 // Ensure we have a name, even if it's just the ID
@@ -782,90 +909,189 @@
                 let checkIn = null;
                 let checkOut = null;
                 
-                // Try to find timestamp fields
-                if (record.checkIn || record.check_in || record.timeIn || record.time_in || record.startTime || record.start_time) {
-                    checkIn = record.checkIn || record.check_in || record.timeIn || record.time_in || record.startTime || record.start_time;
-                }
+                // Try to find timestamp fields (more exhaustive search)
+                if (record.checkIn !== undefined) checkIn = record.checkIn;
+                else if (record.check_in !== undefined) checkIn = record.check_in;
+                else if (record.timeIn !== undefined) checkIn = record.timeIn;
+                else if (record.time_in !== undefined) checkIn = record.time_in;
+                else if (record.startTime !== undefined) checkIn = record.startTime;
+                else if (record.start_time !== undefined) checkIn = record.start_time;
+                else if (record.inTime !== undefined) checkIn = record.inTime;
+                else if (record.in_time !== undefined) checkIn = record.in_time;
+                else if (record.clockIn !== undefined) checkIn = record.clockIn;
+                else if (record.clock_in !== undefined) checkIn = record.clock_in;
                 
-                if (record.checkOut || record.check_out || record.timeOut || record.time_out || record.endTime || record.end_time) {
-                    checkOut = record.checkOut || record.check_out || record.timeOut || record.time_out || record.endTime || record.end_time;
+                if (record.checkOut !== undefined) checkOut = record.checkOut;
+                else if (record.check_out !== undefined) checkOut = record.check_out;
+                else if (record.timeOut !== undefined) checkOut = record.timeOut;
+                else if (record.time_out !== undefined) checkOut = record.time_out;
+                else if (record.endTime !== undefined) checkOut = record.endTime;
+                else if (record.end_time !== undefined) checkOut = record.end_time;
+                else if (record.outTime !== undefined) checkOut = record.outTime;
+                else if (record.out_time !== undefined) checkOut = record.out_time;
+                else if (record.clockOut !== undefined) checkOut = record.clockOut;
+                else if (record.clock_out !== undefined) checkOut = record.clock_out;
+                
+                // Try parsing dates safely
+                let parsedCheckIn = null;
+                let parsedCheckOut = null;
+                
+                try {
+                    parsedCheckIn = checkIn ? safeParseDate(checkIn) : null;
+                    parsedCheckOut = checkOut ? safeParseDate(checkOut) : null;
+                    
+                    if (checkIn && !parsedCheckIn) {
+                        timeErrorCount++;
+                        if (!ignoreTimeErrors) {
+                            throw new Error(`Invalid check-in time value: ${checkIn}`);
+                        }
+                    }
+                    
+                    if (checkOut && !parsedCheckOut) {
+                        timeErrorCount++;
+                        if (!ignoreTimeErrors) {
+                            throw new Error(`Invalid check-out time value: ${checkOut}`);
+                        }
+                    }
+                } catch (error) {
+                    if (!ignoreTimeErrors) {
+                        throw error;
+                    }
+                    
+                    // Track the error but continue processing
+                    const errorMsg = `Time value error in record ${record.id}: ${error.message}`;
+                    if (!processingErrors.includes(errorMsg)) {
+                        processingErrors.push(errorMsg);
+                    }
                 }
                 
                 // If we have date fields but no timestamp, try to use those
-                if (!checkIn && record.date) {
-                    checkIn = record.date;
-                }
-                
-                // Convert Firestore timestamps to Date objects if needed
-                if (checkIn && typeof checkIn === 'object' && checkIn.toDate) {
-                    checkIn = checkIn.toDate();
-                }
-                
-                if (checkOut && typeof checkOut === 'object' && checkOut.toDate) {
-                    checkOut = checkOut.toDate();
-                }
-                
-                // If we have date strings, convert them to Date objects
-                if (checkIn && typeof checkIn === 'string') {
-                    checkIn = new Date(checkIn);
-                }
-                
-                if (checkOut && typeof checkOut === 'string') {
-                    checkOut = new Date(checkOut);
-                }
-                
-                // Look for duration fields if we don't have check-in/check-out times
-                let hours = null;
-                if (!checkIn || !checkOut) {
-                    if (record.hours !== undefined) hours = record.hours;
-                    else if (record.duration !== undefined) hours = record.duration;
-                    else if (record.work_hours !== undefined) hours = record.work_hours;
-                    else if (record.workHours !== undefined) hours = record.workHours;
-                }
-                
-                // Calculate hours worked if we have check-in and check-out
-                if (!hours && checkIn && checkOut) {
-                    // Calculate hours as the difference between timestamps in hours
-                    const diffMs = checkOut.getTime() - checkIn.getTime();
-                    hours = diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
-                }
-                
-                // If hours is still null, set a default value
-                if (hours === null) {
-                    hours = 0;
-                }
-                
-                // If hours is not a number, try to parse it
-                if (typeof hours === 'string') {
-                    hours = parseFloat(hours) || 0;
-                }
-                
-                // Ensure hours is a valid number
-                hours = Math.max(0, hours);
-                
-                // Get the record date for grouping by day
                 let recordDate = null;
-                if (checkIn) {
-                    recordDate = new Date(checkIn);
+                if (!parsedCheckIn && record.date) {
+                    try {
+                        recordDate = safeParseDate(record.date);
+                        if (!recordDate && !ignoreTimeErrors) {
+                            throw new Error(`Invalid date value: ${record.date}`);
+                        }
+                    } catch (error) {
+                        if (!ignoreTimeErrors) {
+                            throw error;
+                        }
+                        
+                        // Track the error but continue processing
+                        const errorMsg = `Date parsing error in record ${record.id}: ${error.message}`;
+                        if (!processingErrors.includes(errorMsg)) {
+                            processingErrors.push(errorMsg);
+                        }
+                    }
+                } else if (parsedCheckIn) {
+                    recordDate = new Date(parsedCheckIn);
                     recordDate.setHours(0, 0, 0, 0); // Normalize to start of day
-                } else if (record.date) {
-                    // If we have a date field but no check-in
-                    if (typeof record.date === 'object' && record.date.toDate) {
-                        recordDate = record.date.toDate();
-                    } else if (typeof record.date === 'string') {
-                        recordDate = new Date(record.date);
-                    } else {
-                        recordDate = record.date;
-                    }
-                    
-                    if (recordDate instanceof Date) {
-                        recordDate.setHours(0, 0, 0, 0);
-                    }
                 } else {
                     // If we have no date information, use the current date
                     recordDate = new Date();
                     recordDate.setHours(0, 0, 0, 0);
                 }
+                
+                // Look for duration fields if we don't have check-in/check-out times
+                let hours = null;
+                if ((!parsedCheckIn || !parsedCheckOut) && record.hours !== undefined) hours = record.hours;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.duration !== undefined) hours = record.duration;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.work_hours !== undefined) hours = record.work_hours;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.workHours !== undefined) hours = record.workHours;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.hoursWorked !== undefined) hours = record.hoursWorked;
+                else if ((!parsedCheckIn || !parsedCheckOut) && record.hours_worked !== undefined) hours = record.hours_worked;
+                
+                // Calculate hours worked if we have check-in and check-out
+                if (hours === null && parsedCheckIn && parsedCheckOut) {
+                    try {
+                        // Calculate hours as the difference between timestamps in hours
+                        const diffMs = parsedCheckOut.getTime() - parsedCheckIn.getTime();
+                        
+                        // Validate that check-out is after check-in
+                        if (diffMs < 0) {
+                            const errorMsg = `Check-out time is before check-in time for employee ${employeeId} on ${recordDate?.toISOString().split('T')[0] || 'unknown date'}`;
+                            if (!processingErrors.includes(errorMsg)) {
+                                processingErrors.push(errorMsg);
+                            }
+                            
+                            if (ignoreTimeErrors) {
+                                // Use default hours as fallback
+                                hours = defaultHours;
+                            } else {
+                                throw new Error(errorMsg);
+                            }
+                        } else {
+                            hours = diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
+                            
+                            // Sanity check: if hours is unreasonably large, it might be a data error
+                            if (hours > 24) {
+                                const errorMsg = `Calculated work hours (${hours.toFixed(2)}) exceeds 24 hours for employee ${employeeId} on ${recordDate?.toISOString().split('T')[0] || 'unknown date'}`;
+                                if (!processingErrors.includes(errorMsg)) {
+                                    processingErrors.push(errorMsg);
+                                }
+                                
+                                if (ignoreTimeErrors) {
+                                    // Cap hours at a reasonable value
+                                    hours = Math.min(hours, 16);
+                                } else {
+                                    throw new Error(errorMsg);
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        if (!ignoreTimeErrors) {
+                            throw error;
+                        }
+                        
+                        // Track the error but continue processing
+                        const errorMsg = `Hours calculation error for employee ${employeeId}: ${error.message}`;
+                        if (!processingErrors.includes(errorMsg)) {
+                            processingErrors.push(errorMsg);
+                        }
+                        
+                        // Use default hours as fallback
+                        hours = defaultHours;
+                    }
+                }
+                
+                // If we still don't have hours (no check-in/check-out and no duration field)
+                if (hours === null) {
+                    const errorMsg = `No valid time data found for employee ${employeeId} on ${recordDate?.toISOString().split('T')[0] || 'unknown date'}. Using default hours (${defaultHours}).`;
+                    if (!processingErrors.includes(errorMsg)) {
+                        processingErrors.push(errorMsg);
+                    }
+                    
+                    // Use default hours as fallback
+                    hours = defaultHours;
+                }
+                
+                // If hours is not a number, try to parse it
+                if (typeof hours === 'string') {
+                    try {
+                        const parsedHours = parseFloat(hours);
+                        if (isNaN(parsedHours)) {
+                            throw new Error(`Cannot parse hours value: ${hours}`);
+                        }
+                        hours = parsedHours;
+                    } catch (error) {
+                        if (!ignoreTimeErrors) {
+                            throw error;
+                        }
+                        
+                        // Track the error but continue processing
+                        const errorMsg = `Hours parsing error for employee ${employeeId}: ${error.message}`;
+                        if (!processingErrors.includes(errorMsg)) {
+                            processingErrors.push(errorMsg);
+                        }
+                        
+                        // Use default hours as fallback
+                        hours = defaultHours;
+                    }
+                }
+                
+                // Ensure hours is a valid number
+                hours = Math.max(0, hours);
                 
                 // Store the attendance record grouped by employee and date
                 if (!employeeAttendanceMap.has(employeeId)) {
@@ -892,12 +1118,20 @@
                 const dayAttendance = employee.attendanceByDate.get(dateString);
                 dayAttendance.totalHours += hours;
                 dayAttendance.records.push({
-                    checkIn: checkIn,
-                    checkOut: checkOut,
+                    checkIn: parsedCheckIn,
+                    checkOut: parsedCheckOut,
                     hours: hours,
                     rawRecord: record
                 });
             });
+            
+            // Add a warning if we're using default values due to many time errors
+            if (timeErrorCount > maxTimeErrorsBeforeManual) {
+                const errorMsg = `Multiple time value errors detected (${timeErrorCount}). Using fallback values where needed.`;
+                if (!processingErrors.includes(errorMsg)) {
+                    processingErrors.push(errorMsg);
+                }
+            }
             
             // Now calculate salary for each employee
             processedData = [];
@@ -958,6 +1192,7 @@
                     formattedOvertimePay: `${currency}${overtimePay.toFixed(2)}`,
                     formattedTotalSalary: `${currency}${totalSalary.toFixed(2)}`,
                     attendanceDetails: attendanceDetails,
+                    workingDays: attendanceDetails.length,
                     currency: currency
                 });
             });
