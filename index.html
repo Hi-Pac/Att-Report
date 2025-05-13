@@ -793,7 +793,7 @@
                     { 
                         data: 'baseSalary',
                         render: function(data) {
-                            return `${data ? data.toLocaleString() : '0'} ريال`;
+                            return `${data ? data.toLocaleString() : '0'} جنية مصري`;
                         }
                     },
                     { 
@@ -1304,7 +1304,7 @@
                     { 
                         data: 'baseSalary',
                         render: function(data) {
-                            return `${parseFloat(data).toLocaleString()} ريال`;
+                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
                         }
                     },
                     { data: 'workDays' },
@@ -1317,19 +1317,19 @@
                     { 
                         data: 'allowances',
                         render: function(data) {
-                            return `${parseFloat(data).toLocaleString()} ريال`;
+                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
                         }
                     },
                     { 
                         data: 'deductions',
                         render: function(data) {
-                            return `${parseFloat(data).toLocaleString()} ريال`;
+                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
                         }
                     },
                     { 
                         data: 'netSalary',
                         render: function(data) {
-                            return `${parseFloat(data).toLocaleString()} ريال`;
+                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
                         }
                     }
                 ],
@@ -1482,12 +1482,12 @@
                                 ['الموظف', 'الراتب الأساسي', 'أيام العمل', 'ساعات العمل', 'البدلات', 'الخصومات', 'صافي الراتب'],
                                 ...data.map(row => [
                                     row.name,
-                                    parseFloat(row.baseSalary).toLocaleString() + ' ريال',
+                                    parseFloat(row.baseSalary).toLocaleString() + ' جنية مصري',
                                     row.workDays.toString(),
                                     row.totalHours.toString() + ' ساعة',
-                                    parseFloat(row.allowances).toLocaleString() + ' ريال',
-                                    parseFloat(row.deductions).toLocaleString() + ' ريال',
-                                    parseFloat(row.netSalary).toLocaleString() + ' ريال'
+                                    parseFloat(row.allowances).toLocaleString() + ' جنية مصري',
+                                    parseFloat(row.deductions).toLocaleString() + ' جنية مصري',
+                                    parseFloat(row.netSalary).toLocaleString() + ' جنية مصري'
                                 ])
                             ]
                         }
