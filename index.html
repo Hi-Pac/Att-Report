@@ -1132,6 +1132,562 @@
                 hoursChart.update();
             }
         };
+
+        // Generate monthly report
+        document.getElementById('generate-report')?.addEventListener('click', () => {
+            const monthInput = document.getElementById('report-month').value;
+            if (!monthInput) {
+                alert('يرجى اختيار الشهر أولاً');
+                return;
+            }
+            
+            const [year, month] = monthInput.split('-');
+            const monthStart = `${year}-${month}-01`;
+            const monthEnd = `${year}-${month}-${new Date(year, month, 0).getDate()}`;
+            
+            const monthName = new Date(year, month - 1).toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
+            document.getElementById('report-title').textContent = monthName;
+            
+            generateEmployeeReport(monthStart, monthEnd);
+            document.getElementById('report-container').classList.remove('hidden');
+        });
+        
+        // Generate employee report for a specific period
+        const generateEmployeeReport = (startDate, endDate) => {
+            // Filter attendance records for the selected period
+            const periodRecords = attendanceData.filter(record => 
+                record.date >= startDate && record.date <= endDate
+            );
+            
+            // Group by employee
+            const employeeReports = {};
+            
+            // Get all unique employees
+            const uniqueEmployees = [...new Set(periodRecords.map(record => record.name))];
+            
+            // Initialize employee reports
+            uniqueEmployees.forEach(name => {
+                employeeReports[name] = {
+                    name,
+                    attendanceDays: 0,
+                    absenceDays: 0,
+                    totalHours: 0,
+                    averageHours: 0,
+                    lateCount: 0
+                };
+            });
+            
+            // Calculate working days in the period
+            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+            const start = new Date(startYear, startMonth - 1, startDay);
+            const end = new Date(endYear, endMonth - 1, endDay);
+            
+            const workingDays = getWorkingDaysCount(start, end);
+            
+            // Analyze attendance records
+            const attendanceDays = {}; // Keep track of days employee attended
+            
+            periodRecords.forEach(record => {
+                const { name, date, time, type, workHours } = record;
+                
+                if (type === 'حضور') {
+                    // Count attendance days (ensure each day is counted only once)
+                    if (!attendanceDays[`${name}-${date}`]) {
+                        attendanceDays[`${name}-${date}`] = true;
+                        employeeReports[name].attendanceDays++;
+                    }
+                    
+                    // Check if late (after 9:00 AM)
+                    const [hours] = time.split(':').map(Number);
+                    if (hours >= 9) {
+                        employeeReports[name].lateCount++;
+                    }
+                }
+                
+                // Add work hours
+                if (workHours) {
+                    employeeReports[name].totalHours += workHours;
+                }
+            });
+            
+            // Calculate absence days and average hours
+            uniqueEmployees.forEach(name => {
+                employeeReports[name].absenceDays = workingDays - employeeReports[name].attendanceDays;
+                
+                if (employeeReports[name].attendanceDays > 0) {
+                    employeeReports[name].averageHours = 
+                        (employeeReports[name].totalHours / employeeReports[name].attendanceDays).toFixed(2);
+                }
+            });
+            
+            // Initialize report table
+            if (reportTable) {
+                reportTable.destroy();
+            }
+            
+            reportTable = $('#report-table').DataTable({
+                data: Object.values(employeeReports),
+                columns: [
+                    { data: 'name' },
+                    { data: 'attendanceDays' },
+                    { data: 'absenceDays' },
+                    { 
+                        data: 'totalHours',
+                        render: function(data) {
+                            return `${data.toFixed(2)} ساعة`;
+                        }
+                    },
+                    { 
+                        data: 'averageHours',
+                        render: function(data) {
+                            return `${data} ساعة`;
+                        }
+                    },
+                    { data: 'lateCount' }
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
+                },
+                paging: false,
+                info: false,
+                searching: false,
+                responsive: true
+            });
+            
+            // Set up export buttons for the report
+            document.getElementById('export-excel')?.addEventListener('click', () => {
+                exportReportToExcel(employeeReports, `تقرير_${document.getElementById('report-title').textContent}`);
+            });
+            
+            document.getElementById('export-pdf')?.addEventListener('click', () => {
+                exportReportToPDF(employeeReports, `تقرير_${document.getElementById('report-title').textContent}`);
+            });
+        };
+        
+        // Get count of working days (excluding weekends) between two dates
+        const getWorkingDaysCount = (startDate, endDate) => {
+            let count = 0;
+            const currentDate = new Date(startDate);
+            
+            while (currentDate <= endDate) {
+                const dayOfWeek = currentDate.getDay();
+                if (dayOfWeek !== 5 && dayOfWeek !== 6) { // Not Friday or Saturday
+                    count++;
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            return count;
+        };
+        
+        // Calculate payroll
+        document.getElementById('calculate-payroll')?.addEventListener('click', () => {
+            const monthInput = document.getElementById('payroll-month').value;
+            if (!monthInput) {
+                alert('يرجى اختيار الشهر أولاً');
+                return;
+            }
+            
+            const [year, month] = monthInput.split('-');
+            const monthStart = `${year}-${month}-01`;
+            const monthEnd = `${year}-${month}-${new Date(year, month, 0).getDate()}`;
+            
+            const monthName = new Date(year, month - 1).toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
+            document.getElementById('payroll-title').textContent = monthName;
+            
+            calculateMonthlyPayroll(monthStart, monthEnd);
+            document.getElementById('payroll-container').classList.remove('hidden');
+        });
+        
+        // Calculate monthly payroll
+        const calculateMonthlyPayroll = (startDate, endDate) => {
+            // Filter attendance records for the selected period
+            const periodRecords = attendanceData.filter(record => 
+                record.date >= startDate && record.date <= endDate
+            );
+            
+            // Calculate working days in the period
+            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+            const start = new Date(startYear, startMonth - 1, startDay);
+            const end = new Date(endYear, endMonth - 1, endDay);
+            
+            const workingDays = getWorkingDaysCount(start, end);
+            
+            // Prepare payroll data
+            const payrollData = [];
+            
+            // Process each employee
+            employeesData.forEach(employee => {
+                // Get attendance records for this employee
+                const employeeRecords = periodRecords.filter(record => record.name === employee.name);
+                
+                // Count unique attendance days
+                const attendanceDays = new Set();
+                employeeRecords.forEach(record => {
+                    if (record.type === 'حضور') {
+                        attendanceDays.add(record.date);
+                    }
+                });
+                
+                // Calculate total work hours
+                let totalHours = 0;
+                employeeRecords.forEach(record => {
+                    if (record.workHours) {
+                        totalHours += record.workHours;
+                    }
+                });
+                
+                // Calculate allowances (10% of base salary for perfect attendance)
+                const attendanceRatio = attendanceDays.size / workingDays;
+                let allowances = 0;
+                if (attendanceRatio >= 0.95) { // 95% or higher attendance
+                    allowances = employee.baseSalary * 0.1;
+                }
+                
+                // Calculate deductions (based on absences)
+                const absenceDays = workingDays - attendanceDays.size;
+                const dailyRate = employee.baseSalary / workingDays;
+                let deductions = absenceDays * dailyRate;
+                
+                // Calculate net salary
+                const netSalary = employee.baseSalary + allowances - deductions;
+                
+                // Add to payroll data
+                payrollData.push({
+                    name: employee.name,
+                    baseSalary: employee.baseSalary,
+                    workDays: attendanceDays.size,
+                    totalHours: totalHours.toFixed(2),
+                    allowances: allowances.toFixed(2),
+                    deductions: deductions.toFixed(2),
+                    netSalary: netSalary.toFixed(2)
+                });
+            });
+            
+            // Initialize payroll table
+            if (payrollTable) {
+                payrollTable.destroy();
+            }
+            
+            payrollTable = $('#payroll-table').DataTable({
+                data: payrollData,
+                columns: [
+                    { data: 'name' },
+                    { 
+                        data: 'baseSalary',
+                        render: function(data) {
+                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
+                        }
+                    },
+                    { data: 'workDays' },
+                    { 
+                        data: 'totalHours',
+                        render: function(data) {
+                            return `${data} ساعة`;
+                        }
+                    },
+                    { 
+                        data: 'allowances',
+                        render: function(data) {
+                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
+                        }
+                    },
+                    { 
+                        data: 'deductions',
+                        render: function(data) {
+                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
+                        }
+                    },
+                    { 
+                        data: 'netSalary',
+                        render: function(data) {
+                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
+                        }
+                    }
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
+                },
+                paging: false,
+                info: false,
+                searching: false,
+                responsive: true
+            });
+            
+            // Set up export buttons for payroll
+            document.getElementById('export-payroll-excel')?.addEventListener('click', () => {
+                exportPayrollToExcel(payrollData, `مرتبات_${document.getElementById('payroll-title').textContent}`);
+            });
+            
+            document.getElementById('export-payroll-pdf')?.addEventListener('click', () => {
+                exportPayrollToPDF(payrollData, `مرتبات_${document.getElementById('payroll-title').textContent}`);
+            });
+        };
+        
+        // Export report to Excel
+        const exportReportToExcel = (data, fileName) => {
+            // Convert data to CSV format
+            const headers = ['الموظف', 'أيام الحضور', 'أيام الغياب', 'مجموع ساعات العمل', 'متوسط ساعات العمل اليومية', 'عدد مرات التأخير'];
+            
+            let csvContent = headers.join(',') + '\r\n';
+            
+            Object.values(data).forEach(row => {
+                const values = [
+                    row.name,
+                    row.attendanceDays,
+                    row.absenceDays,
+                    row.totalHours.toFixed(2),
+                    row.averageHours,
+                    row.lateCount
+                ];
+                
+                csvContent += values.join(',') + '\r\n';
+            });
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `${fileName}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+        
+        // Export report to PDF
+        const exportReportToPDF = (data, fileName) => {
+            const doc = {
+                pageSize: 'A4',
+                pageOrientation: 'portrait',
+                content: [
+                    { text: fileName, style: 'header' },
+                    { text: '\n' },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto'],
+                            body: [
+                                ['الموظف', 'أيام الحضور', 'أيام الغياب', 'مجموع ساعات العمل', 'متوسط ساعات العمل', 'مرات التأخير'],
+                                ...Object.values(data).map(row => [
+                                    row.name,
+                                    row.attendanceDays.toString(),
+                                    row.absenceDays.toString(),
+                                    row.totalHours.toFixed(2).toString() + ' ساعة',
+                                    row.averageHours.toString() + ' ساعة',
+                                    row.lateCount.toString()
+                                ])
+                            ]
+                        }
+                    }
+                ],
+                styles: {
+                    header: {
+                        fontSize: 18,
+                        bold: true,
+                        alignment: 'center',
+                        margin: [0, 0, 0, 10]
+                    }
+                },
+                defaultStyle: {
+                    alignment: 'right',
+                    font: 'Tajawal'
+                }
+            };
+            
+            pdfMake.createPdf(doc).download(fileName + '.pdf');
+        };
+        
+        // Export payroll to Excel
+        const exportPayrollToExcel = (data, fileName) => {
+            // Convert data to CSV format
+            const headers = ['الموظف', 'الراتب الأساسي', 'أيام العمل', 'إجمالي ساعات العمل', 'البدلات', 'الخصومات', 'صافي الراتب'];
+            
+            let csvContent = headers.join(',') + '\r\n';
+            
+            data.forEach(row => {
+                const values = [
+                    row.name,
+                    row.baseSalary,
+                    row.workDays,
+                    row.totalHours,
+                    row.allowances,
+                    row.deductions,
+                    row.netSalary
+                ];
+                
+                csvContent += values.join(',') + '\r\n';
+            });
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `${fileName}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+        
+        // Export payroll to PDF
+        const exportPayrollToPDF = (data, fileName) => {
+            const doc = {
+                pageSize: 'A4',
+                pageOrientation: 'landscape',
+                content: [
+                    { text: fileName, style: 'header' },
+                    { text: '\n' },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
+                            body: [
+                                ['الموظف', 'الراتب الأساسي', 'أيام العمل', 'ساعات العمل', 'البدلات', 'الخصومات', 'صافي الراتب'],
+                                ...data.map(row => [
+                                    row.name,
+                                    parseFloat(row.baseSalary).toLocaleString() + ' جنية مصري',
+                                    row.workDays.toString(),
+                                    row.totalHours.toString() + ' ساعة',
+                                    parseFloat(row.allowances).toLocaleString() + ' جنية مصري',
+                                    parseFloat(row.deductions).toLocaleString() + ' جنية مصري',
+                                    parseFloat(row.netSalary).toLocaleString() + ' جنية مصري'
+                                ])
+                            ]
+                        }
+                    }
+                ],
+                styles: {
+                    header: {
+                        fontSize: 18,
+                        bold: true,
+                        alignment: 'center',
+                        margin: [0, 0, 0, 10]
+                    }
+                },
+                defaultStyle: {
+                    alignment: 'right',
+                    font: 'Tajawal'
+                }
+            };
+            
+            pdfMake.createPdf(doc).download(fileName + '.pdf');
+        };
+        
+        // Edit employee
+        const editEmployee = (employeeId) => {
+            // Get employee data
+            const employee = employeesData.find(emp => emp.id === employeeId);
+            if (!employee) return;
+            
+            // Show edit form in modal
+            const modal = document.getElementById('add-employee-modal');
+            const form = document.getElementById('add-employee-form');
+            
+            modal.querySelector('h3').textContent = 'تعديل بيانات الموظف';
+            
+            // Fill form with employee data
+            form.querySelector('[name="name"]').value = employee.name;
+            form.querySelector('[name="phone"]').value = employee.phone || '';
+            form.querySelector('[name="hireDate"]').value = employee.hireDate;
+            form.querySelector('[name="baseSalary"]').value = employee.baseSalary;
+            
+            // Store employee ID in a data attribute
+            form.setAttribute('data-employee-id', employeeId);
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            
+            // Add event listener to form for edit
+            form.removeEventListener('submit', handleAddEmployee);
+            form.addEventListener('submit', handleEditEmployee);
+        };
+        
+        // Handle edit employee form submission
+        const handleEditEmployee = async (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            const employeeId = form.getAttribute('data-employee-id');
+            
+            if (!employeeId) return;
+            
+            const formData = new FormData(form);
+            const employeeData = {
+                name: formData.get('name'),
+                phone: formData.get('phone') || '',
+                hireDate: formData.get('hireDate'),
+                baseSalary: parseFloat(formData.get('baseSalary')),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            try {
+                await db.collection('employees').doc(employeeId).update(employeeData);
+                document.getElementById('add-employee-modal').classList.add('hidden');
+                
+                // Reset form event listener
+                form.removeEventListener('submit', handleEditEmployee);
+                form.addEventListener('submit', handleAddEmployee);
+                
+                // Reload employees
+                loadEmployees();
+                updateEmployeeFilter();
+            } catch (error) {
+                console.error('Error updating employee:', error);
+                alert('حدث خطأ أثناء تحديث بيانات الموظف. يرجى المحاولة مرة أخرى.');
+            }
+        };
+        
+        // Handle add employee form submission
+        const handleAddEmployee = async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const employeeData = {
+                name: formData.get('name'),
+                phone: formData.get('phone') || '',
+                hireDate: formData.get('hireDate'),
+                baseSalary: parseFloat(formData.get('baseSalary')),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            try {
+                await db.collection('employees').add(employeeData);
+                document.getElementById('add-employee-modal').classList.add('hidden');
+                loadEmployees();
+                updateEmployeeFilter();
+            } catch (error) {
+                console.error('Error adding employee:', error);
+                alert('حدث خطأ أثناء إضافة الموظف. يرجى المحاولة مرة أخرى.');
+            }
+        };
+        
+        // Set initial form submission handler
+        document.getElementById('add-employee-form')?.addEventListener('submit', handleAddEmployee);
+        
+        // Delete employee
+        const deleteEmployee = async (employeeId) => {
+            if (confirm('هل أنت متأكد من رغبتك في حذف هذا الموظف؟')) {
+                try {
+                    await db.collection('employees').doc(employeeId).delete();
+                    loadEmployees();
+                    updateEmployeeFilter();
+                } catch (error) {
+                    console.error('Error deleting employee:', error);
+                    alert('حدث خطأ أثناء حذف الموظف. يرجى المحاولة مرة أخرى.');
+                }
+            }
+        };
         
         // Initialize application
         const initApp = () => {
