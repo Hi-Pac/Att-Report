@@ -336,8 +336,7 @@
                                 <thead>
                                     <tr>
                                         <th>الاسم</th>
-                                        <th>البريد الإلكتروني</th>
-                                        <th>الهاتف</th>
+                                        <th>بيانات الاتصال</th>
                                         <th>تاريخ التعيين</th>
                                         <th>الراتب الأساسي</th>
                                         <th>إجراءات</th>
@@ -476,10 +475,6 @@
                         <input type="text" name="name" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" required>
                     </div>
                     <div>
-                        <label class="block text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
-                        <input type="email" name="email" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" required>
-                    </div>
-                    <div>
                         <label class="block text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف</label>
                         <input type="tel" name="phone" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
                     </div>
@@ -518,13 +513,13 @@
         
         // Firebase configuration
         const firebaseConfig = {
-              apiKey: "AIzaSyBz3vodmnTMHpTJ1fXcmjOnmfgU0DkqnIo",
-              authDomain: "attendance-fd328.firebaseapp.com",
-              projectId: "attendance-fd328",
-              storageBucket: "attendance-fd328.firebasestorage.app",
-              messagingSenderId: "254552859337",
-              appId: "1:254552859337:web:1f49c2e5efbd651f32e318",
-              measurementId: "G-DNW0R0DPJ8"
+          apiKey: "AIzaSyBz3vodmnTMHpTJ1fXcmjOnmfgU0DkqnIo",
+          authDomain: "attendance-fd328.firebaseapp.com",
+          projectId: "attendance-fd328",
+          storageBucket: "attendance-fd328.firebasestorage.app",
+          messagingSenderId: "254552859337",
+          appId: "1:254552859337:web:1f49c2e5efbd651f32e318",
+          measurementId: "G-DNW0R0DPJ8"
         };
         
         // Global variables
@@ -648,7 +643,6 @@
             const formData = new FormData(e.target);
             const employeeData = {
                 name: formData.get('name'),
-                email: formData.get('email'),
                 phone: formData.get('phone') || '',
                 hireDate: formData.get('hireDate'),
                 baseSalary: parseFloat(formData.get('baseSalary')),
@@ -675,13 +669,16 @@
                     ...doc.data()
                 }));
                 
+                // إضافة معالجة الأخطاء هنا
+                console.log("تم تحميل بيانات الحضور:", attendanceData.length, "سجل");
+                
                 initAttendanceTable(attendanceData);
                 updateEmployeeFilter();
                 document.getElementById('loading-section').classList.add('hidden');
             } catch (error) {
                 console.error('Error loading attendance data:', error);
                 document.getElementById('loading-section').classList.add('hidden');
-                alert('حدث خطأ أثناء تحميل بيانات الحضور. يرجى المحاولة مرة أخرى.');
+                alert('حدث خطأ أثناء تحميل بيانات الحضور: ' + error.message);
             }
         };
         
@@ -694,10 +691,13 @@
                     ...doc.data()
                 }));
                 
+                // إضافة معالجة الأخطاء هنا
+                console.log("تم تحميل بيانات الموظفين:", employeesData.length, "موظف");
+                
                 initEmployeesTable(employeesData);
             } catch (error) {
                 console.error('Error loading employees data:', error);
-                alert('حدث خطأ أثناء تحميل بيانات الموظفين. يرجى المحاولة مرة أخرى.');
+                alert('حدث خطأ أثناء تحميل بيانات الموظفين: ' + error.message);
             }
         };
         
@@ -761,7 +761,7 @@
             });
         };
         
-        // Initialize employees table
+        // Initialize employees table - تعديل هذه الدالة لتتوافق مع هيكل البيانات الخاص بك
         const initEmployeesTable = (data) => {
             if (employeesTable) {
                 employeesTable.destroy();
@@ -771,11 +771,17 @@
                 data: data,
                 columns: [
                     { data: 'name' },
-                    { data: 'email' },
                     { 
-                        data: 'phone',
+                        data: null,
                         render: function(data) {
-                            return data || '-';
+                            let contactInfo = '';
+                            if (data.phone) {
+                                contactInfo += `هاتف: ${data.phone}`;
+                            }
+                            if (data.email) {
+                                contactInfo += contactInfo ? `<br>بريد: ${data.email}` : `بريد: ${data.email}`;
+                            }
+                            return contactInfo || '-';
                         }
                     },
                     { 
@@ -787,7 +793,7 @@
                     { 
                         data: 'baseSalary',
                         render: function(data) {
-                            return `${data.toLocaleString()} ريال`;
+                            return `${data ? data.toLocaleString() : '0'} ريال`;
                         }
                     },
                     { 
@@ -1008,7 +1014,7 @@
                 // Count attendance days
                 attendanceData.forEach(record => {
                     if (record.type === 'حضور') {
-                        const monthKey = record.date.substring(0, 7);
+                        const monthKey = record.date?.substring(0, 7);
                         if (attendanceByMonth[monthKey]) {
                             attendanceByMonth[monthKey].attendance++;
                             attendanceByMonth[monthKey].absence--;
@@ -1506,10 +1512,94 @@
         
         // Edit employee
         const editEmployee = (employeeId) => {
-            // Implement edit employee functionality
-            console.log('Edit employee:', employeeId);
-            // This would typically show a modal with a form pre-filled with employee data
+            // Get employee data
+            const employee = employeesData.find(emp => emp.id === employeeId);
+            if (!employee) return;
+            
+            // Show edit form in modal
+            const modal = document.getElementById('add-employee-modal');
+            const form = document.getElementById('add-employee-form');
+            
+            modal.querySelector('h3').textContent = 'تعديل بيانات الموظف';
+            
+            // Fill form with employee data
+            form.querySelector('[name="name"]').value = employee.name;
+            form.querySelector('[name="phone"]').value = employee.phone || '';
+            form.querySelector('[name="hireDate"]').value = employee.hireDate;
+            form.querySelector('[name="baseSalary"]').value = employee.baseSalary;
+            
+            // Store employee ID in a data attribute
+            form.setAttribute('data-employee-id', employeeId);
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            
+            // Add event listener to form for edit
+            form.removeEventListener('submit', handleAddEmployee);
+            form.addEventListener('submit', handleEditEmployee);
         };
+        
+        // Handle edit employee form submission
+        const handleEditEmployee = async (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            const employeeId = form.getAttribute('data-employee-id');
+            
+            if (!employeeId) return;
+            
+            const formData = new FormData(form);
+            const employeeData = {
+                name: formData.get('name'),
+                phone: formData.get('phone') || '',
+                hireDate: formData.get('hireDate'),
+                baseSalary: parseFloat(formData.get('baseSalary')),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            try {
+                await db.collection('employees').doc(employeeId).update(employeeData);
+                document.getElementById('add-employee-modal').classList.add('hidden');
+                
+                // Reset form event listener
+                form.removeEventListener('submit', handleEditEmployee);
+                form.addEventListener('submit', handleAddEmployee);
+                
+                // Reload employees
+                loadEmployees();
+                updateEmployeeFilter();
+            } catch (error) {
+                console.error('Error updating employee:', error);
+                alert('حدث خطأ أثناء تحديث بيانات الموظف. يرجى المحاولة مرة أخرى.');
+            }
+        };
+        
+        // Handle add employee form submission
+        const handleAddEmployee = async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const employeeData = {
+                name: formData.get('name'),
+                phone: formData.get('phone') || '',
+                hireDate: formData.get('hireDate'),
+                baseSalary: parseFloat(formData.get('baseSalary')),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            try {
+                await db.collection('employees').add(employeeData);
+                document.getElementById('add-employee-modal').classList.add('hidden');
+                loadEmployees();
+                updateEmployeeFilter();
+            } catch (error) {
+                console.error('Error adding employee:', error);
+                alert('حدث خطأ أثناء إضافة الموظف. يرجى المحاولة مرة أخرى.');
+            }
+        };
+        
+        // Set initial form submission handler
+        document.getElementById('add-employee-form')?.addEventListener('submit', handleAddEmployee);
         
         // Delete employee
         const deleteEmployee = async (employeeId) => {
@@ -1517,6 +1607,7 @@
                 try {
                     await db.collection('employees').doc(employeeId).delete();
                     loadEmployees();
+                    updateEmployeeFilter();
                 } catch (error) {
                     console.error('Error deleting employee:', error);
                     alert('حدث خطأ أثناء حذف الموظف. يرجى المحاولة مرة أخرى.');
@@ -1526,6 +1617,7 @@
         
         // Initialize application
         const initApp = () => {
+            console.log("بدء تشغيل التطبيق...");
             loadAttendance();
             loadEmployees();
             initCharts();
