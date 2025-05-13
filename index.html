@@ -4,42 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إدارة بيانات الحضور والانصراف</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    
-    <!-- DataTables -->
+
+    <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.3/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.5/css/buttons.dataTables.min.css">
-    
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.3/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.5/js/dataTables.buttons.min.js"></script>
-    
-    <!-- Export Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.5/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.5/js/buttons.print.min.js"></script>
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    
+
+    <!-- Custom Theme & Dark Mode -->
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -48,1666 +30,508 @@
                         success: '#10B981',
                         warning: '#F59E0B',
                         danger: '#EF4444',
-                        dark: '#181818',
+                        dark: '#181818'
                     },
                     fontFamily: {
-                        'tajawal': ['Tajawal', 'sans-serif'],
+                        tajawal: ['Tajawal', 'sans-serif']
                     }
                 }
-            },
-            darkMode: 'class',
-        }
+            }
+        };
     </script>
-    
+
     <style>
-        body {
-            font-family: 'Tajawal', sans-serif;
-        }
-        
-        .dark body {
-            background-color: #181818;
-            color: #ffffff;
-        }
-        
+        body { font-family: 'Tajawal', sans-serif; }
         .loading-spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
+            border: 4px solid rgba(0,0,0,0.1);
             border-left-color: #5D5CDE;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            border-radius: 50%; width: 30px; height: 30px;
             animation: spin 1s linear infinite;
         }
-        
-        .dark .loading-spinner {
-            border-color: rgba(255, 255, 255, 0.1);
-            border-left-color: #5D5CDE;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* تخصيص نمط DataTables */
-        table.dataTable {
-            width: 100% !important;
-            border-collapse: collapse !important;
-        }
-        
-        table.dataTable th, table.dataTable td {
-            padding: 0.75rem;
-            text-align: right;
-        }
-        
-        .dataTables_wrapper .dataTables_filter,
-        .dataTables_wrapper .dataTables_length,
-        .dataTables_wrapper .dataTables_info,
-        .dataTables_wrapper .dataTables_paginate {
-            margin-bottom: 1rem;
-            color: #4a5568;
-        }
-        
-        .dark .dataTables_wrapper .dataTables_filter,
-        .dark .dataTables_wrapper .dataTables_length,
-        .dark .dataTables_wrapper .dataTables_info,
-        .dark .dataTables_wrapper .dataTables_paginate {
-            color: #cbd5e0;
-        }
-        
-        .dataTables_wrapper .dataTables_filter input {
-            margin-right: 0.5rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            border: 1px solid #e2e8f0;
-        }
-        
-        .dark .dataTables_wrapper .dataTables_filter input {
-            background-color: #2d3748;
-            border-color: #4a5568;
-            color: #cbd5e0;
-        }
-        
-        .dataTables_wrapper .dataTables_paginate .paginate_button {
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            margin: 0 0.25rem;
-        }
-        
-        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-            background-color: #5D5CDE !important;
-            border-color: #5D5CDE !important;
-            color: white !important;
-        }
-        
-        .dt-buttons .dt-button {
-            padding: 0.5rem 1rem;
-            border-radius: 0.25rem;
-            margin-right: 0.5rem;
-            background-color: #5D5CDE;
-            color: white;
-            border: none;
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
-        
-        .dt-buttons .dt-button:hover {
-            background-color: #4C51BF;
-        }
-        
-        /* دعم الوضع المظلم للجداول */
-        .dark table.dataTable {
-            color: #ffffff;
-        }
-        
-        .dark table.dataTable thead th,
-        .dark table.dataTable tfoot th {
-            background-color: #2d3748;
-            color: #e2e8f0;
-        }
-        
-        .dark table.dataTable tbody tr {
-            background-color: #1a202c;
-        }
-        
-        .dark table.dataTable tbody tr:hover {
-            background-color: #2d3748;
-        }
-        
-        /* تخصيص تبويبات */
-        .tab-active {
-            background-color: #5D5CDE;
-            color: white;
-        }
-        
-        .dark .tab-active {
-            background-color: #4C51BF;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* DataTables RTL & Dark Mode */
+        table.dataTable { width:100%!important; border-collapse:collapse!important; }
+        table.dataTable td, table.dataTable th { padding:0.75rem; text-align:right; }
+        .dt-buttons .dt-button { padding:0.5rem 1rem; background:#5D5CDE; color:#fff; border:none; border-radius:0.25rem; margin-right:0.5rem; }
+        .dt-buttons .dt-button:hover { background:#4C51BF; }
     </style>
 </head>
-
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
     <div class="container mx-auto px-4 py-8">
-        <header class="mb-8 text-center">
+        <!-- Header -->
+        <header class="text-center mb-8">
             <h1 class="text-3xl font-bold text-primary mb-2">إدارة بيانات الحضور والانصراف</h1>
             <p class="text-gray-600 dark:text-gray-300">تحليل وإدارة سجلات الحضور والانصراف والرواتب</p>
         </header>
-        
-        <!-- قسم تسجيل الدخول -->
-        <div id="auth-section" class="mb-8 max-w-md mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+
+        <!-- Authentication -->
+        <section id="auth-section" class="max-w-md mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
             <h2 class="text-xl font-semibold mb-4">تسجيل الدخول</h2>
             <form id="login-form" class="space-y-4">
                 <div>
-                    <label for="email" class="block text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
-                    <input type="email" id="email" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                    <label for="email" class="block mb-1 text-gray-700 dark:text-gray-300">البريد الإلكتروني</label>
+                    <input type="email" id="email" required class="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                 </div>
                 <div>
-                    <label for="password" class="block text-gray-700 dark:text-gray-300 mb-1">كلمة المرور</label>
-                    <input type="password" id="password" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                    <label for="password" class="block mb-1 text-gray-700 dark:text-gray-300">كلمة المرور</label>
+                    <input type="password" id="password" required class="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                 </div>
-                <div>
-                    <button type="submit" class="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-white rounded-md transition duration-200">
-                        تسجيل الدخول
-                    </button>
-                </div>
-                <div id="login-error" class="text-danger hidden"></div>
+                <button type="submit" class="w-full py-2 bg-primary hover:bg-primary/90 text-white rounded-md transition">تسجيل الدخول</button>
+                <p id="login-error" class="text-danger hidden"></p>
             </form>
-        </div>
-        
-        <!-- القسم الرئيسي للتطبيق (يظهر بعد تسجيل الدخول) -->
-        <div id="app-section" class="hidden">
-            <!-- شريط التبويبات -->
-            <div class="flex flex-wrap mb-6 border-b border-gray-200 dark:border-gray-700">
-                <button class="tab-btn tab-active py-2 px-4 text-sm font-medium rounded-t-lg" data-tab="attendance">
-                    <i class="fas fa-clipboard-list mr-1"></i> سجلات الحضور
-                </button>
-                <button class="tab-btn py-2 px-4 text-sm font-medium" data-tab="employees">
-                    <i class="fas fa-users mr-1"></i> الموظفين
-                </button>
-                <button class="tab-btn py-2 px-4 text-sm font-medium" data-tab="reports">
-                    <i class="fas fa-chart-bar mr-1"></i> التقارير
-                </button>
-                <button class="tab-btn py-2 px-4 text-sm font-medium" data-tab="payroll">
-                    <i class="fas fa-money-bill-wave mr-1"></i> المرتبات
-                </button>
-                
+        </section>
+
+        <!-- Main App -->
+        <section id="app-section" class="hidden">
+            <!-- Tabs -->
+            <div class="flex flex-wrap mb-6 border-b dark:border-gray-700">
+                <button class="tab-btn tab-active py-2 px-4 rounded-t-lg" data-tab="attendance"><i class="fas fa-clipboard-list ml-1"></i> سجلات الحضور</button>
+                <button class="tab-btn py-2 px-4" data-tab="employees"><i class="fas fa-users ml-1"></i> الموظفين</button>
+                <button class="tab-btn py-2 px-4" data-tab="reports"><i class="fas fa-chart-bar ml-1"></i> التقارير</button>
+                <button class="tab-btn py-2 px-4" data-tab="payroll"><i class="fas fa-money-bill-wave ml-1"></i> المرتبات</button>
                 <div class="mr-auto flex items-center">
-                    <button id="logout-btn" class="text-sm text-gray-600 dark:text-gray-400 hover:text-danger flex items-center">
-                        <i class="fas fa-sign-out-alt mr-1"></i> تسجيل الخروج
-                    </button>
-                    <button id="theme-toggle" class="mr-4 text-gray-600 dark:text-gray-300">
-                        <i class="fas fa-moon dark:hidden"></i>
-                        <i class="fas fa-sun hidden dark:block"></i>
-                    </button>
+                    <button id="logout-btn" class="text-gray-600 dark:text-gray-400 hover:text-danger flex items-center"><i class="fas fa-sign-out-alt ml-1"></i> تسجيل الخروج</button>
+                    <button id="theme-toggle" class="ml-4 text-gray-600 dark:text-gray-300"><i class="fas fa-moon dark:hidden"></i><i class="fas fa-sun hidden dark:block"></i></button>
                 </div>
             </div>
-            
-            <!-- قسم التحميل -->
-            <div id="loading-section" class="flex flex-col items-center justify-center py-12">
+
+            <!-- Loading Indicator -->
+            <div id="loading-section" class="flex flex-col items-center py-12">
                 <div class="loading-spinner mb-4"></div>
                 <p class="text-gray-600 dark:text-gray-400">جاري تحميل البيانات...</p>
             </div>
-            
-            <!-- محتوى التبويبات -->
+
+            <!-- Tab Contents Container -->
             <div id="tab-content-container">
-                <!-- تبويب سجلات الحضور -->
+                <!-- Attendance Tab -->
                 <div id="attendance-tab" class="tab-content active">
+                    <!-- Filters -->
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-                        <div class="flex flex-wrap gap-4 mb-4">
+                        <div class="flex flex-wrap gap-4">
+                            <!-- Date Filter -->
                             <div class="flex-1 min-w-[200px]">
-                                <label class="block text-gray-700 dark:text-gray-300 mb-1">فلترة حسب التاريخ</label>
+                                <label class="block mb-1 text-gray-700 dark:text-gray-300">فلترة حسب التاريخ</label>
                                 <div class="flex gap-2">
-                                    <input type="date" id="date-from" class="flex-1 p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
-                                    <input type="date" id="date-to" class="flex-1 p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
-                                    <button id="filter-date" class="py-2 px-4 bg-primary text-white rounded-md">
-                                        <i class="fas fa-filter"></i>
-                                    </button>
+                                    <input type="date" id="date-from" class="flex-1 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                                    <input type="date" id="date-to" class="flex-1 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                                    <button id="filter-date" class="py-2 px-4 bg-primary text-white rounded-md"><i class="fas fa-filter"></i></button>
                                 </div>
                             </div>
+                            <!-- Employee Filter -->
                             <div class="flex-1 min-w-[200px]">
-                                <label class="block text-gray-700 dark:text-gray-300 mb-1">فلترة حسب الموظف</label>
+                                <label class="block mb-1 text-gray-700 dark:text-gray-300">فلترة حسب الموظف</label>
                                 <div class="flex gap-2">
-                                    <select id="employee-filter" class="flex-1 p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
-                                        <option value="">جميع الموظفين</option>
-                                    </select>
-                                    <button id="filter-employee" class="py-2 px-4 bg-primary text-white rounded-md">
-                                        <i class="fas fa-filter"></i>
-                                    </button>
+                                    <select id="employee-filter" class="flex-1 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"><option value="">جميع الموظفين</option></select>
+                                    <button id="filter-employee" class="py-2 px-4 bg-primary text-white rounded-md"><i class="fas fa-filter"></i></button>
                                 </div>
                             </div>
+                            <!-- Type Filter -->
                             <div class="flex-1 min-w-[200px]">
-                                <label class="block text-gray-700 dark:text-gray-300 mb-1">فلترة حسب نوع التسجيل</label>
+                                <label class="block mb-1 text-gray-700 dark:text-gray-300">فلترة حسب نوع التسجيل</label>
                                 <div class="flex gap-2">
-                                    <select id="type-filter" class="flex-1 p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
+                                    <select id="type-filter" class="flex-1 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                         <option value="">الكل</option>
                                         <option value="حضور">حضور</option>
                                         <option value="انصراف">انصراف</option>
                                     </select>
-                                    <button id="filter-type" class="py-2 px-4 bg-primary text-white rounded-md">
-                                        <i class="fas fa-filter"></i>
-                                    </button>
+                                    <button id="filter-type" class="py-2 px-4 bg-primary text-white rounded-md"><i class="fas fa-filter"></i></button>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="overflow-x-auto">
-                            <table id="attendance-table" class="w-full stripe hover">
+                        <!-- Attendance Table -->
+                        <div class="overflow-x-auto mt-4">
+                            <table id="attendance-table" class="display stripe hover" style="width:100%">
                                 <thead>
-                                    <tr>
-                                        <th>الموظف</th>
-                                        <th>التاريخ</th>
-                                        <th>الوقت</th>
-                                        <th>نوع التسجيل</th>
-                                        <th>الموقع</th>
-                                        <th>ساعات العمل</th>
-                                    </tr>
+                                    <tr><th>الموظف</th><th>التاريخ</th><th>الوقت</th><th>نوع التسجيل</th><th>الموقع</th><th>ساعات العمل</th></tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-                
-                <!-- تبويب الموظفين -->
+
+                <!-- Employees Tab -->
                 <div id="employees-tab" class="tab-content">
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-                        <div class="flex justify-between mb-4">
+                        <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-semibold">قائمة الموظفين</h3>
-                            <button id="add-employee-btn" class="py-2 px-4 bg-success text-white rounded-md">
-                                <i class="fas fa-plus mr-1"></i> إضافة موظف
-                            </button>
+                            <button id="add-employee-btn" class="py-2 px-4 bg-success text-white rounded-md"><i class="fas fa-plus ml-1"></i> إضافة موظف</button>
                         </div>
-                        
                         <div class="overflow-x-auto">
-                            <table id="employees-table" class="w-full stripe hover">
+                            <table id="employees-table" class="display stripe hover" style="width:100%">
                                 <thead>
-                                    <tr>
-                                        <th>الاسم</th>
-                                        <th>بيانات الاتصال</th>
-                                        <th>تاريخ التعيين</th>
-                                        <th>الراتب الأساسي</th>
-                                        <th>إجراءات</th>
-                                    </tr>
+                                    <tr><th>الاسم</th><th>بيانات الاتصال</th><th>تاريخ التعيين</th><th>الراتب الأساسي</th><th>إجراءات</th></tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-                
-                <!-- تبويب التقارير -->
+
+                <!-- Reports Tab -->
                 <div id="reports-tab" class="tab-content">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <!-- Monthly Attendance Chart -->
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                             <h3 class="text-lg font-semibold mb-4">نسبة الحضور والغياب الشهرية</h3>
-                            <div class="chart-container">
-                                <canvas id="attendance-chart"></canvas>
-                            </div>
+                            <div class="h-72 relative"><canvas id="attendance-chart"></canvas></div>
                         </div>
-                        
+                        <!-- Work Hours Chart -->
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                             <h3 class="text-lg font-semibold mb-4">ساعات العمل حسب الموظف</h3>
-                            <div class="chart-container">
-                                <canvas id="hours-chart"></canvas>
-                            </div>
+                            <div class="h-72 relative"><canvas id="hours-chart"></canvas></div>
                         </div>
                     </div>
-                    
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-                        <h3 class="text-lg font-semibold mb-4">تقرير أداء الموظفين</h3>
-                        
-                        <div class="mb-4">
-                            <label class="block text-gray-700 dark:text-gray-300 mb-1">اختر الشهر</label>
-                            <input type="month" id="report-month" class="p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
-                            <button id="generate-report" class="mr-2 py-2 px-4 bg-primary text-white rounded-md">
-                                إنشاء التقرير
-                            </button>
+                    <!-- Employee Report Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                        <div class="mb-4 flex items-center gap-2">
+                            <label class="block text-gray-700 dark:text-gray-300">اختر الشهر</label>
+                            <input type="month" id="report-month" class="p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                            <button id="generate-report" class="py-2 px-4 bg-primary text-white rounded-md">إنشاء التقرير</button>
                         </div>
-                        
                         <div id="report-container" class="hidden">
-                            <div class="flex justify-between mb-4">
+                            <div class="flex justify-between items-center mb-4">
                                 <h4 class="font-medium">تقرير الشهر: <span id="report-title"></span></h4>
-                                <div>
-                                    <button id="export-excel" class="py-1 px-3 bg-success text-white rounded-md text-sm">
-                                        <i class="fas fa-file-excel mr-1"></i> تصدير Excel
-                                    </button>
-                                    <button id="export-pdf" class="py-1 px-3 bg-danger text-white rounded-md text-sm mr-2">
-                                        <i class="fas fa-file-pdf mr-1"></i> تصدير PDF
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="overflow-x-auto">
-                                <table id="report-table" class="w-full stripe hover">
-                                    <thead>
-                                        <tr>
-                                            <th>الموظف</th>
-                                            <th>أيام الحضور</th>
-                                            <th>أيام الغياب</th>
-                                            <th>مجموع ساعات العمل</th>
-                                            <th>متوسط ساعات العمل اليومية</th>
-                                            <th>عدد مرات التأخير</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- تبويب المرتبات -->
-                <div id="payroll-tab" class="tab-content">
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-                        <h3 class="text-lg font-semibold mb-4">حساب المرتبات الشهرية</h3>
-                        
-                        <div class="mb-4">
-                            <label class="block text-gray-700 dark:text-gray-300 mb-1">اختر الشهر</label>
-                            <div class="flex gap-2">
-                                <input type="month" id="payroll-month" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
-                                <button id="calculate-payroll" class="py-2 px-4 bg-primary text-white rounded-md">
-                                    حساب المرتبات
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div id="payroll-container" class="hidden">
-                            <div class="flex justify-between mb-4">
-                                <h4 class="font-medium">مرتبات شهر: <span id="payroll-title"></span></h4>
-                                <div>
-                                    <button id="export-payroll-excel" class="py-1 px-3 bg-success text-white rounded-md text-sm">
-                                        <i class="fas fa-file-excel mr-1"></i> تصدير Excel
-                                    </button>
-                                    <button id="export-payroll-pdf" class="py-1 px-3 bg-danger text-white rounded-md text-sm mr-2">
-                                        <i class="fas fa-file-pdf mr-1"></i> تصدير PDF
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="overflow-x-auto">
-                                <table id="payroll-table" class="w-full stripe hover">
-                                    <thead>
-                                        <tr>
-                                            <th>الموظف</th>
-                                            <th>الراتب الأساسي</th>
-                                            <th>عدد أيام العمل</th>
-                                            <th>إجمالي ساعات العمل</th>
-                                            <th>البدلات</th>
-                                            <th>الخصومات</th>
-                                            <th>صافي الراتب</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- نماذج مخفية -->
-        <div id="employee-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 max-w-md w-full">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 id="modal-title" class="text-lg font-semibold">إضافة موظف جديد</h3>
-                    <button class="close-modal text-gray-500">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <form id="employee-form" class="space-y-4">
-                    <input type="hidden" id="employee-id" name="employee-id" value="">
-                    <div>
-                        <label class="block text-gray-700 dark:text-gray-300 mb-1">الاسم الكامل</label>
-                        <input type="text" name="name" id="employee-name-input" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" required>
-                    </div>
-                    <div>
-                        <label class="block text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف</label>
-                        <input type="tel" name="phone" id="employee-phone-input" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
-                    </div>
-                    <div>
-                        <label class="block text-gray-700 dark:text-gray-300 mb-1">تاريخ التعيين</label>
-                        <input type="date" name="hireDate" id="employee-hire-date-input" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" required>
-                    </div>
-                    <div>
-                        <label class="block text-gray-700 dark:text-gray-300 mb-1">الراتب الأساسي</label>
-                        <input type="number" name="baseSalary" id="employee-salary-input" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" required>
-                    </div>
-                    
-                    <div class="flex justify-end gap-2">
-                        <button type="button" class="close-modal py-2 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md">
-                            إلغاء
-                        </button>
-                        <button type="submit" class="py-2 px-4 bg-success text-white rounded-md">
-                            حفظ
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        // Check for dark mode preference
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-        }
-        
-        // Dark mode toggle
-        document.getElementById('theme-toggle')?.addEventListener('click', () => {
-            document.documentElement.classList.toggle('dark');
-        });
-        
-        // Firebase configuration
-        const firebaseConfig = {
-          apiKey: "AIzaSyBz3vodmnTMHpTJ1fXcmjOnmfgU0DkqnIo",
-          authDomain: "attendance-fd328.firebaseapp.com",
-          projectId: "attendance-fd328",
-          storageBucket: "attendance-fd328.firebasestorage.app",
-          messagingSenderId: "254552859337",
-          appId: "1:254552859337:web:1f49c2e5efbd651f32e318",
-          measurementId: "G-DNW0R0DPJ8"
-        };
-        
-        // Global variables
-        let attendanceTable, employeesTable, reportTable, payrollTable;
-        let attendanceData = [];
-        let employeesData = [];
-        let attendanceChart, hoursChart;
-        let isEditMode = false;
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-        
-        // Format date as YYYY-MM-DD
-        const formatDate = (date) => {
-            const d = date || new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
-        
-        // Format date for display
-        const formatDateForDisplay = (dateStr) => {
-            if (!dateStr) return '';
-            const [year, month, day] = dateStr.split('-');
-            return `${day}/${month}/${year}`;
-        };
-        
-        // Authentication handling
-        document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const errorElement = document.getElementById('login-error');
-            
-            try {
-                await auth.signInWithEmailAndPassword(email, password);
-                // Login successful, will be handled by the auth state change listener
-            } catch (error) {
-                errorElement.textContent = error.message;
-                errorElement.classList.remove('hidden');
-            }
-        });
-        
-        // Logout handling
-        document.getElementById('logout-btn')?.addEventListener('click', async () => {
-            try {
-                await auth.signOut();
-                // Logout successful, will be handled by the auth state change listener
-            } catch (error) {
-                console.error('Error signing out:', error);
-            }
-        });
-        
-        // Auth state changes
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                // User is signed in
-                document.getElementById('auth-section').classList.add('hidden');
-                document.getElementById('app-section').classList.remove('hidden');
-                initApp();
-            } else {
-                // User is signed out
-                document.getElementById('auth-section').classList.remove('hidden');
-                document.getElementById('app-section').classList.add('hidden');
-                
-                // Clear form
-                document.getElementById('login-form').reset();
-                document.getElementById('login-error').classList.add('hidden');
-            }
-        });
-        
-        // Tab handling
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tabId = btn.getAttribute('data-tab');
-                
-                // Update tab buttons
-                document.querySelectorAll('.tab-btn').forEach(b => {
-                    b.classList.remove('tab-active');
-                });
-                btn.classList.add('tab-active');
-                
-                // Update tab content
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(`${tabId}-tab`).classList.add('active');
-                
-                // Redraw tables if needed (fixes layout issues)
-                if (tabId === 'attendance' && attendanceTable) {
-                    attendanceTable.columns.adjust().draw();
-                } else if (tabId === 'employees' && employeesTable) {
-                    employeesTable.columns.adjust().draw();
-                } else if (tabId === 'reports' && reportTable) {
-                    reportTable.columns.adjust().draw();
-                    updateCharts();
-                } else if (tabId === 'payroll' && payrollTable) {
-                    payrollTable.columns.adjust().draw();
-                }
-            });
-        });
-        
-        // Modal handling - تم تعديل هنا لاستخدام معرف المودال الجديد
-        document.getElementById('add-employee-btn')?.addEventListener('click', () => {
-            resetEmployeeForm();
-            document.getElementById('modal-title').textContent = 'إضافة موظف جديد';
-            document.getElementById('employee-id').value = '';
-            isEditMode = false;
-            document.getElementById('employee-modal').classList.remove('hidden');
-        });
-        
-        document.querySelectorAll('.close-modal').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.getElementById('employee-modal').classList.add('hidden');
-            });
-        });
-        
-        // Reset employee form
-        const resetEmployeeForm = () => {
-            document.getElementById('employee-form').reset();
-            document.getElementById('employee-id').value = '';
-        };
-        
-        // Employee form submission handler - تم تعديل هذه الدالة لمعالجة كلا من الإضافة والتحرير
-        document.getElementById('employee-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const form = e.target;
-            const employeeId = document.getElementById('employee-id').value;
-            
-            const formData = new FormData(form);
-            const employeeData = {
-                name: formData.get('name'),
-                phone: formData.get('phone') || '',
-                hireDate: formData.get('hireDate'),
-                baseSalary: parseFloat(formData.get('baseSalary')),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            try {
-                if (isEditMode && employeeId) {
-                    // تحديث موظف موجود
-                    await db.collection('employees').doc(employeeId).update(employeeData);
-                    console.log('تم تحديث الموظف بنجاح، المعرف:', employeeId);
-                } else {
-                    // إضافة موظف جديد
-                    employeeData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-                    await db.collection('employees').add(employeeData);
-                    console.log('تم إضافة موظف جديد بنجاح');
-                }
-                
-                // إغلاق المودال وإعادة تحميل البيانات
-                document.getElementById('employee-modal').classList.add('hidden');
-                await loadEmployees();
-                updateEmployeeFilter();
-                
-            } catch (error) {
-                console.error('Error with employee:', error);
-                alert('حدث خطأ أثناء حفظ بيانات الموظف: ' + error.message);
-            }
-        });
-        
-        // Load attendance data
-        const loadAttendance = async () => {
-            try {
-                const snapshot = await db.collection('attendance').orderBy('timestamp', 'desc').get();
-                attendanceData = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                
-                console.log("تم تحميل بيانات الحضور:", attendanceData.length, "سجل");
-                
-                initAttendanceTable(attendanceData);
-                updateEmployeeFilter();
-                document.getElementById('loading-section').classList.add('hidden');
-            } catch (error) {
-                console.error('Error loading attendance data:', error);
-                document.getElementById('loading-section').classList.add('hidden');
-                alert('حدث خطأ أثناء تحميل بيانات الحضور: ' + error.message);
-            }
-        };
-        
-        // Load employees data
-        const loadEmployees = async () => {
-            try {
-                const snapshot = await db.collection('employees').orderBy('name').get();
-                employeesData = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                
-                console.log("تم تحميل بيانات الموظفين:", employeesData.length, "موظف");
-                
-                initEmployeesTable(employeesData);
-                return true;
-            } catch (error) {
-                console.error('Error loading employees data:', error);
-                alert('حدث خطأ أثناء تحميل بيانات الموظفين: ' + error.message);
-                return false;
-            }
-        };
-        
-        // Initialize attendance table
-        const initAttendanceTable = (data) => {
-            if (attendanceTable) {
-                attendanceTable.destroy();
-            }
-            
-            attendanceTable = $('#attendance-table').DataTable({
-                data: data,
-                columns: [
-                    { data: 'name' },
-                    { 
-                        data: 'date',
-                        render: function(data) {
-                            return formatDateForDisplay(data);
-                        }
-                    },
-                    { data: 'time' },
-                    { data: 'type' },
-                    { 
-                        data: 'coordinates',
-                        render: function(data) {
-                            if (!data) return 'غير متاح';
-                            return `${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`;
-                        }
-                    },
-                    { 
-                        data: 'workHours',
-                        render: function(data) {
-                            return data ? `${data} ساعة` : '-';
-                        }
-                    }
-                ],
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
-                },
-                dom: 'Bfrtip',
-                buttons: [
-                    {
-                        extend: 'excel',
-                        text: '<i class="fas fa-file-excel mr-1"></i> تصدير Excel',
-                        className: 'exportExcel',
-                        title: 'سجلات الحضور والانصراف'
-                    },
-                    {
-                        extend: 'pdf',
-                        text: '<i class="fas fa-file-pdf mr-1"></i> تصدير PDF',
-                        className: 'exportPdf',
-                        title: 'سجلات الحضور والانصراف'
-                    },
-                    {
-                        extend: 'print',
-                        text: '<i class="fas fa-print mr-1"></i> طباعة',
-                        className: 'printTable'
-                    }
-                ],
-                responsive: true,
-                order: [[1, 'desc'], [2, 'desc']]
-            });
-        };
-        
-        // Initialize employees table
-        const initEmployeesTable = (data) => {
-            if (employeesTable) {
-                employeesTable.destroy();
-            }
-            
-            employeesTable = $('#employees-table').DataTable({
-                data: data,
-                columns: [
-                    { data: 'name' },
-                    { 
-                        data: null,
-                        render: function(data) {
-                            let contactInfo = '';
-                            if (data.phone) {
-                                contactInfo += `هاتف: ${data.phone}`;
-                            }
-                            if (data.email) {
-                                contactInfo += contactInfo ? `<br>بريد: ${data.email}` : `بريد: ${data.email}`;
-                            }
-                            return contactInfo || '-';
-                        }
-                    },
-                    { 
-                        data: 'hireDate',
-                        render: function(data) {
-                            return formatDateForDisplay(data);
-                        }
-                    },
-                    { 
-                        data: 'baseSalary',
-                        render: function(data) {
-                            return `${data ? data.toLocaleString() : '0'} جنيه مصري`;
-                        }
-                    },
-                    { 
-                        data: 'id',
-                        render: function(data, type, row) {
-                            return `
                                 <div class="flex gap-2">
-                                    <button class="edit-employee p-1 text-primary" data-id="${data}">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="delete-employee p-1 text-danger" data-id="${data}">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
+                                    <button id="export-excel" class="py-1 px-3 bg-success text-white rounded-md text-sm"><i class="fas fa-file-excel ml-1"></i> Excel</button>
+                                    <button id="export-pdf" class="py-1 px-3 bg-danger text-white rounded-md text-sm"><i class="fas fa-file-pdf ml-1"></i> PDF</button>
                                 </div>
-                            `;
-                        }
-                    }
-                ],
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
-                },
-                dom: 'Bfrtip',
-                buttons: [
-                    {
-                        extend: 'excel',
-                        text: '<i class="fas fa-file-excel mr-1"></i> تصدير Excel',
-                        className: 'exportExcel',
-                        title: 'قائمة الموظفين'
-                    },
-                    {
-                        extend: 'pdf',
-                        text: '<i class="fas fa-file-pdf mr-1"></i> تصدير PDF',
-                        className: 'exportPdf',
-                        title: 'قائمة الموظفين'
-                    },
-                    {
-                        extend: 'print',
-                        text: '<i class="fas fa-print mr-1"></i> طباعة',
-                        className: 'printTable'
-                    }
-                ],
-                responsive: true
-            });
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table id="report-table" class="display stripe hover" style="width:100%">
+                                    <thead>
+                                        <tr><th>الموظف</th><th>أيام الحضور</th><th>أيام الغياب</th><th>مجموع ساعات العمل</th><th>متوسط ساعات العمل اليومية</th><th>عدد مرات التأخير</th></tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payroll Tab -->
+                <div id="payroll-tab" class="tab-content">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                        <div class="mb-4 flex items-center gap-2">
+                            <label class="block text-gray-700 dark:text-gray-300">اختر الشهر</label>
+                            <input type="month" id="payroll-month" class="p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                            <button id="calculate-payroll" class="py-2 px-4 bg-primary text-white rounded-md">حساب المرتبات</button>
+                        </div>
+                        <div id="payroll-container" class="hidden">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="font-medium">مرتبات شهر: <span id="payroll-title"></span></h4>
+                                <div class="flex gap-2">
+                                    <button id="export-payroll-excel" class="py-1 px-3 bg-success text-white rounded-md text-sm"><i class="fas fa-file-excel ml-1"></i> Excel</button>
+                                    <button id="export-payroll-pdf" class="py-1 px-3 bg-danger text-white rounded-md text-sm"><i class="fas fa-file-pdf ml-1"></i> PDF</button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table id="payroll-table" class="display stripe hover" style="width:100%">
+                                    <thead>
+                                        <tr><th>الموظف</th><th>الراتب الأساسي</th><th>أيام العمل</th><th>ساعات العمل</th><th>البدلات</th><th>الخصومات</th><th>صافي الراتب</th></tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employee Modal -->
+            <div id="employee-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 max-w-md w-full">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 id="modal-title" class="text-lg font-semibold">إضافة موظف جديد</h3>
+                        <button class="close-modal text-gray-500"><i class="fas fa-times"></i></button>
+                    </div>
+                    <form id="employee-form" class="space-y-4">
+                        <input type="hidden" id="employee-id" />
+                        <div>
+                            <label class="block mb-1 text-gray-700 dark:text-gray-300">الاسم الكامل</label>
+                            <input type="text" id="employee-name-input" name="name" required class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-gray-700 dark:text-gray-300">رقم الهاتف</label>
+                            <input type="tel" id="employee-phone-input" name="phone" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-gray-700 dark:text-gray-300">تاريخ التعيين</label>
+                            <input type="date" id="employee-hire-date-input" name="hireDate" required class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-gray-700 dark:text-gray-300">الراتب الأساسي</label>
+                            <input type="number" id="employee-salary-input" name="baseSalary" required class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" class="close-modal py-2 px-4 border rounded-md dark:border-gray-600 dark:text-gray-300">إلغاء</button>
+                            <button type="submit" class="py-2 px-4 bg-success text-white rounded-md">حفظ</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.3/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.5/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.5/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.5/js/buttons.print.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <!-- Main Script -->
+    <script>
+        // Firebase config
+        const firebaseConfig = { /* ... */ };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Global
+        let attendanceTable, employeesTable, reportTable, payrollTable;
+        let attendanceData = [], employeesData = [], attendanceChart, hoursChart;
+        let isEditMode = false;
+
+        // Utils
+        const formatDate = d => {
+            const date = d || new Date();
+            return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
         };
-        
-        // Attach event handlers after table initialization
-        $(document).on('click', '.edit-employee', function() {
-            const employeeId = $(this).data('id');
-            console.log('تعديل الموظف برقم:', employeeId);
-            editEmployee(employeeId);
-        });
-        
-        $(document).on('click', '.delete-employee', function() {
-            const employeeId = $(this).data('id');
-            console.log('حذف الموظف برقم:', employeeId);
-            deleteEmployee(employeeId);
-        });
-        
-        // Update employee filter dropdown
-        const updateEmployeeFilter = () => {
-            const filterSelect = document.getElementById('employee-filter');
-            if (!filterSelect) return;
-            
-            // Clear previous options except the first one (All employees)
-            while (filterSelect.options.length > 1) {
-                filterSelect.remove(1);
-            }
-            
-            // Get unique employees from attendance data
-            const uniqueEmployees = [...new Set(attendanceData.map(record => record.name))];
-            
-            // Add employees to dropdown
-            uniqueEmployees.sort().forEach(employee => {
-                const option = document.createElement('option');
-                option.value = employee;
-                option.textContent = employee;
-                filterSelect.appendChild(option);
-            });
-        };
-        
-        // Filter attendance by date
-        document.getElementById('filter-date')?.addEventListener('click', () => {
-            const dateFrom = document.getElementById('date-from').value;
-            const dateTo = document.getElementById('date-to').value;
-            
-            if (!dateFrom && !dateTo) {
-                initAttendanceTable(attendanceData);
-                return;
-            }
-            
-            let filteredData = [...attendanceData];
-            
-            if (dateFrom) {
-                filteredData = filteredData.filter(record => record.date >= dateFrom);
-            }
-            
-            if (dateTo) {
-                filteredData = filteredData.filter(record => record.date <= dateTo);
-            }
-            
-            initAttendanceTable(filteredData);
-        });
-        
-        // Filter attendance by employee
-        document.getElementById('filter-employee')?.addEventListener('click', () => {
-            const employee = document.getElementById('employee-filter').value;
-            
-            if (!employee) {
-                initAttendanceTable(attendanceData);
-                return;
-            }
-            
-            const filteredData = attendanceData.filter(record => record.name === employee);
-            initAttendanceTable(filteredData);
-        });
-        
-        // Filter attendance by type
-        document.getElementById('filter-type')?.addEventListener('click', () => {
-            const type = document.getElementById('type-filter').value;
-            
-            if (!type) {
-                initAttendanceTable(attendanceData);
-                return;
-            }
-            
-            const filteredData = attendanceData.filter(record => record.type === type);
-            initAttendanceTable(filteredData);
-        });
-        
-        // Initialize charts
-        const initCharts = () => {
-            // Attendance chart (total attendance by month)
-            const ctxAttendance = document.getElementById('attendance-chart')?.getContext('2d');
-            if (ctxAttendance) {
-                attendanceChart = new Chart(ctxAttendance, {
-                    type: 'bar',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'الحضور',
-                            backgroundColor: '#10B981',
-                            data: []
-                        }, {
-                            label: 'الغياب',
-                            backgroundColor: '#EF4444',
-                            data: []
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'عدد الأيام'
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-            
-            // Hours chart (total hours by employee)
-            const ctxHours = document.getElementById('hours-chart')?.getContext('2d');
-            if (ctxHours) {
-                hoursChart = new Chart(ctxHours, {
-                    type: 'pie',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            backgroundColor: [
-                                '#5D5CDE', '#10B981', '#F59E0B', '#EF4444',
-                                '#4C51BF', '#059669', '#D97706', '#B91C1C'
-                            ],
-                            data: []
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
-                            }
-                        }
-                    }
-                });
-            }
-            
-            updateCharts();
-        };
-        
-        // Edit employee - تم تعديل هذه الدالة بشكل كامل
-        const editEmployee = (employeeId) => {
-            console.log('جاري تعديل الموظف رقم:', employeeId);
-            
-            // البحث عن بيانات الموظف
-            const employee = employeesData.find(emp => emp.id === employeeId);
-            if (!employee) {
-                console.error('لم يتم العثور على الموظف:', employeeId);
-                return;
-            }
-            
-            // تعيين حالة التعديل
-            isEditMode = true;
-            
-            // تعيين عنوان المودال
-            document.getElementById('modal-title').textContent = 'تعديل بيانات الموظف';
-            
-            // تعبئة البيانات في النموذج
-            document.getElementById('employee-id').value = employeeId;
-            document.getElementById('employee-name-input').value = employee.name || '';
-            document.getElementById('employee-phone-input').value = employee.phone || '';
-            document.getElementById('employee-hire-date-input').value = employee.hireDate || '';
-            document.getElementById('employee-salary-input').value = employee.baseSalary || 0;
-            
-            // إظهار المودال
-            document.getElementById('employee-modal').classList.remove('hidden');
-        };
-        
-        // Delete employee
-        const deleteEmployee = async (employeeId) => {
-            if (confirm('هل أنت متأكد من رغبتك في حذف هذا الموظف؟')) {
-                try {
-                    await db.collection('employees').doc(employeeId).delete();
-                    console.log('تم حذف الموظف بنجاح:', employeeId);
-                    await loadEmployees();
-                    updateEmployeeFilter();
-                } catch (error) {
-                    console.error('Error deleting employee:', error);
-                    alert('حدث خطأ أثناء حذف الموظف: ' + error.message);
-                }
-            }
-        };
-        
-        // أكواد إضافية من الكود السابق (تقارير، مرتبات، إلخ)...
-        // ... (الجزء المتبقي من الكود السابق بدون تغيير)
-        
-        // Update charts with current data
-        const updateCharts = () => {
-            if (!attendanceData.length) return;
-            
-            // Update attendance chart
-            if (attendanceChart) {
-                // Group records by month
-                const attendanceByMonth = {};
-                const today = new Date();
-                const workingDaysInMonth = 22; // Average working days in a month
-                
-                // Get the last 6 months
-                for (let i = 0; i < 6; i++) {
-                    const date = new Date();
-                    date.setMonth(today.getMonth() - i);
-                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                    const monthName = date.toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
-                    
-                    attendanceByMonth[monthKey] = {
-                        name: monthName,
-                        attendance: 0,
-                        absence: workingDaysInMonth // Start with all days as absence
-                    };
-                }
-                
-                // Count attendance days
-                attendanceData.forEach(record => {
-                    if (record.type === 'حضور') {
-                        const monthKey = record.date?.substring(0, 7);
-                        if (attendanceByMonth[monthKey]) {
-                            attendanceByMonth[monthKey].attendance++;
-                            attendanceByMonth[monthKey].absence--;
-                        }
-                    }
-                });
-                
-                // Sort months chronologically
-                const sortedMonths = Object.keys(attendanceByMonth).sort();
-                
-                // Update chart data
-                attendanceChart.data.labels = sortedMonths.map(key => attendanceByMonth[key].name);
-                attendanceChart.data.datasets[0].data = sortedMonths.map(key => attendanceByMonth[key].attendance);
-                attendanceChart.data.datasets[1].data = sortedMonths.map(key => attendanceByMonth[key].absence);
-                attendanceChart.update();
-            }
-            
-            // Update hours chart
-            if (hoursChart) {
-                // Group work hours by employee
-                const hoursByEmployee = {};
-                
-                attendanceData.forEach(record => {
-                    if (record.workHours) {
-                        if (!hoursByEmployee[record.name]) {
-                            hoursByEmployee[record.name] = 0;
-                        }
-                        hoursByEmployee[record.name] += record.workHours;
-                    }
-                });
-                
-                // Sort employees by hours (descending)
-                const sortedEmployees = Object.keys(hoursByEmployee).sort((a, b) => hoursByEmployee[b] - hoursByEmployee[a]);
-                
-                // Limit to top 8 employees for better visualization
-                const topEmployees = sortedEmployees.slice(0, 8);
-                
-                // Update chart data
-                hoursChart.data.labels = topEmployees;
-                hoursChart.data.datasets[0].data = topEmployees.map(emp => hoursByEmployee[emp]);
-                hoursChart.update();
-            }
+        const formatDateForDisplay = ds => {
+            if (!ds) return '';
+            const [y,m,d] = ds.split('-');
+            return `${d}/${m}/${y}`;
         };
 
-        // Generate monthly report
-        document.getElementById('generate-report')?.addEventListener('click', () => {
-            const monthInput = document.getElementById('report-month').value;
-            if (!monthInput) {
-                alert('يرجى اختيار الشهر أولاً');
-                return;
-            }
-            
-            const [year, month] = monthInput.split('-');
-            const monthStart = `${year}-${month}-01`;
-            const monthEnd = `${year}-${month}-${new Date(year, month, 0).getDate()}`;
-            
-            const monthName = new Date(year, month - 1).toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
-            document.getElementById('report-title').textContent = monthName;
-            
-            generateEmployeeReport(monthStart, monthEnd);
-            document.getElementById('report-container').classList.remove('hidden');
-        });
-        
-        // Generate employee report for a specific period
-        const generateEmployeeReport = (startDate, endDate) => {
-            // Filter attendance records for the selected period
-            const periodRecords = attendanceData.filter(record => 
-                record.date >= startDate && record.date <= endDate
-            );
-            
-            // Group by employee
-            const employeeReports = {};
-            
-            // Get all unique employees
-            const uniqueEmployees = [...new Set(periodRecords.map(record => record.name))];
-            
-            // Initialize employee reports
-            uniqueEmployees.forEach(name => {
-                employeeReports[name] = {
-                    name,
-                    attendanceDays: 0,
-                    absenceDays: 0,
-                    totalHours: 0,
-                    averageHours: 0,
-                    lateCount: 0
-                };
-            });
-            
-            // Calculate working days in the period
-            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-            const start = new Date(startYear, startMonth - 1, startDay);
-            const end = new Date(endYear, endMonth - 1, endDay);
-            
-            const workingDays = getWorkingDaysCount(start, end);
-            
-            // Analyze attendance records
-            const attendanceDays = {}; // Keep track of days employee attended
-            
-            periodRecords.forEach(record => {
-                const { name, date, time, type, workHours } = record;
-                
-                if (type === 'حضور') {
-                    // Count attendance days (ensure each day is counted only once)
-                    if (!attendanceDays[`${name}-${date}`]) {
-                        attendanceDays[`${name}-${date}`] = true;
-                        employeeReports[name].attendanceDays++;
-                    }
-                    
-                    // Check if late (after 9:00 AM)
-                    const [hours] = time.split(':').map(Number);
-                    if (hours >= 9) {
-                        employeeReports[name].lateCount++;
-                    }
-                }
-                
-                // Add work hours
-                if (workHours) {
-                    employeeReports[name].totalHours += workHours;
-                }
-            });
-            
-            // Calculate absence days and average hours
-            uniqueEmployees.forEach(name => {
-                employeeReports[name].absenceDays = workingDays - employeeReports[name].attendanceDays;
-                
-                if (employeeReports[name].attendanceDays > 0) {
-                    employeeReports[name].averageHours = 
-                        (employeeReports[name].totalHours / employeeReports[name].attendanceDays).toFixed(2);
-                }
-            });
-            
-            // Initialize report table
-            if (reportTable) {
-                reportTable.destroy();
-            }
-            
-            reportTable = $('#report-table').DataTable({
-                data: Object.values(employeeReports),
-                columns: [
-                    { data: 'name' },
-                    { data: 'attendanceDays' },
-                    { data: 'absenceDays' },
-                    { 
-                        data: 'totalHours',
-                        render: function(data) {
-                            return `${data.toFixed(2)} ساعة`;
-                        }
-                    },
-                    { 
-                        data: 'averageHours',
-                        render: function(data) {
-                            return `${data} ساعة`;
-                        }
-                    },
-                    { data: 'lateCount' }
-                ],
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
-                },
-                paging: false,
-                info: false,
-                searching: false,
-                responsive: true
-            });
-            
-            // Set up export buttons for the report
-            document.getElementById('export-excel')?.addEventListener('click', () => {
-                exportReportToExcel(employeeReports, `تقرير_${document.getElementById('report-title').textContent}`);
-            });
-            
-            document.getElementById('export-pdf')?.addEventListener('click', () => {
-                exportReportToPDF(employeeReports, `تقرير_${document.getElementById('report-title').textContent}`);
-            });
-        };
-        
-        // Get count of working days (excluding weekends) between two dates
-        const getWorkingDaysCount = (startDate, endDate) => {
-            let count = 0;
-            const currentDate = new Date(startDate);
-            
-            while (currentDate <= endDate) {
-                const dayOfWeek = currentDate.getDay();
-                if (dayOfWeek !== 5 && dayOfWeek !== 6) { // Not Friday or Saturday
-                    count++;
-                }
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-            
-            return count;
-        };
-        
-        // Calculate payroll
-        document.getElementById('calculate-payroll')?.addEventListener('click', () => {
-            const monthInput = document.getElementById('payroll-month').value;
-            if (!monthInput) {
-                alert('يرجى اختيار الشهر أولاً');
-                return;
-            }
-            
-            const [year, month] = monthInput.split('-');
-            const monthStart = `${year}-${month}-01`;
-            const monthEnd = `${year}-${month}-${new Date(year, month, 0).getDate()}`;
-            
-            const monthName = new Date(year, month - 1).toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
-            document.getElementById('payroll-title').textContent = monthName;
-            
-            calculateMonthlyPayroll(monthStart, monthEnd);
-            document.getElementById('payroll-container').classList.remove('hidden');
-        });
-        
-        // Calculate monthly payroll
-        const calculateMonthlyPayroll = (startDate, endDate) => {
-            // Filter attendance records for the selected period
-            const periodRecords = attendanceData.filter(record => 
-                record.date >= startDate && record.date <= endDate
-            );
-            
-            // Calculate working days in the period
-            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-            const start = new Date(startYear, startMonth - 1, startDay);
-            const end = new Date(endYear, endMonth - 1, endDay);
-            
-            const workingDays = getWorkingDaysCount(start, end);
-            
-            // Prepare payroll data
-            const payrollData = [];
-            
-            // Process each employee
-            employeesData.forEach(employee => {
-                // Get attendance records for this employee
-                const employeeRecords = periodRecords.filter(record => record.name === employee.name);
-                
-                // Count unique attendance days
-                const attendanceDays = new Set();
-                employeeRecords.forEach(record => {
-                    if (record.type === 'حضور') {
-                        attendanceDays.add(record.date);
-                    }
-                });
-                
-                // Calculate total work hours
-                let totalHours = 0;
-                employeeRecords.forEach(record => {
-                    if (record.workHours) {
-                        totalHours += record.workHours;
-                    }
-                });
-                
-                // Calculate allowances (10% of base salary for perfect attendance)
-                const attendanceRatio = attendanceDays.size / workingDays;
-                let allowances = 0;
-                if (attendanceRatio >= 0.95) { // 95% or higher attendance
-                    allowances = employee.baseSalary * 0.1;
-                }
-                
-                // Calculate deductions (based on absences)
-                const absenceDays = workingDays - attendanceDays.size;
-                const dailyRate = employee.baseSalary / workingDays;
-                let deductions = absenceDays * dailyRate;
-                
-                // Calculate net salary
-                const netSalary = employee.baseSalary + allowances - deductions;
-                
-                // Add to payroll data
-                payrollData.push({
-                    name: employee.name,
-                    baseSalary: employee.baseSalary,
-                    workDays: attendanceDays.size,
-                    totalHours: totalHours.toFixed(2),
-                    allowances: allowances.toFixed(2),
-                    deductions: deductions.toFixed(2),
-                    netSalary: netSalary.toFixed(2)
-                });
-            });
-            
-            // Initialize payroll table
-            if (payrollTable) {
-                payrollTable.destroy();
-            }
-            
-            payrollTable = $('#payroll-table').DataTable({
-                data: payrollData,
-                columns: [
-                    { data: 'name' },
-                    { 
-                        data: 'baseSalary',
-                        render: function(data) {
-                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
-                        }
-                    },
-                    { data: 'workDays' },
-                    { 
-                        data: 'totalHours',
-                        render: function(data) {
-                            return `${data} ساعة`;
-                        }
-                    },
-                    { 
-                        data: 'allowances',
-                        render: function(data) {
-                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
-                        }
-                    },
-                    { 
-                        data: 'deductions',
-                        render: function(data) {
-                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
-                        }
-                    },
-                    { 
-                        data: 'netSalary',
-                        render: function(data) {
-                            return `${parseFloat(data).toLocaleString()} جنية مصري`;
-                        }
-                    }
-                ],
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
-                },
-                paging: false,
-                info: false,
-                searching: false,
-                responsive: true
-            });
-            
-            // Set up export buttons for payroll
-            document.getElementById('export-payroll-excel')?.addEventListener('click', () => {
-                exportPayrollToExcel(payrollData, `مرتبات_${document.getElementById('payroll-title').textContent}`);
-            });
-            
-            document.getElementById('export-payroll-pdf')?.addEventListener('click', () => {
-                exportPayrollToPDF(payrollData, `مرتبات_${document.getElementById('payroll-title').textContent}`);
-            });
-        };
-        
-        // Export report to Excel
-        const exportReportToExcel = (data, fileName) => {
-            // Convert data to CSV format
-            const headers = ['الموظف', 'أيام الحضور', 'أيام الغياب', 'مجموع ساعات العمل', 'متوسط ساعات العمل اليومية', 'عدد مرات التأخير'];
-            
-            let csvContent = headers.join(',') + '\r\n';
-            
-            Object.values(data).forEach(row => {
-                const values = [
-                    row.name,
-                    row.attendanceDays,
-                    row.absenceDays,
-                    row.totalHours.toFixed(2),
-                    row.averageHours,
-                    row.lateCount
-                ];
-                
-                csvContent += values.join(',') + '\r\n';
-            });
-            
-            // Create and download file
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            
-            if (link.download !== undefined) {
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `${fileName}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        };
-        
-        // Export report to PDF
-        const exportReportToPDF = (data, fileName) => {
-            const doc = {
-                pageSize: 'A4',
-                pageOrientation: 'portrait',
-                content: [
-                    { text: fileName, style: 'header' },
-                    { text: '\n' },
-                    {
-                        table: {
-                            headerRows: 1,
-                            widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto'],
-                            body: [
-                                ['الموظف', 'أيام الحضور', 'أيام الغياب', 'مجموع ساعات العمل', 'متوسط ساعات العمل', 'مرات التأخير'],
-                                ...Object.values(data).map(row => [
-                                    row.name,
-                                    row.attendanceDays.toString(),
-                                    row.absenceDays.toString(),
-                                    row.totalHours.toFixed(2).toString() + ' ساعة',
-                                    row.averageHours.toString() + ' ساعة',
-                                    row.lateCount.toString()
-                                ])
-                            ]
-                        }
-                    }
-                ],
-                styles: {
-                    header: {
-                        fontSize: 18,
-                        bold: true,
-                        alignment: 'center',
-                        margin: [0, 0, 0, 10]
-                    }
-                },
-                defaultStyle: {
-                    alignment: 'right',
-                    font: 'Tajawal'
-                }
-            };
-            
-            pdfMake.createPdf(doc).download(fileName + '.pdf');
-        };
-        
-        // Export payroll to Excel
-        const exportPayrollToExcel = (data, fileName) => {
-            // Convert data to CSV format
-            const headers = ['الموظف', 'الراتب الأساسي', 'أيام العمل', 'إجمالي ساعات العمل', 'البدلات', 'الخصومات', 'صافي الراتب'];
-            
-            let csvContent = headers.join(',') + '\r\n';
-            
-            data.forEach(row => {
-                const values = [
-                    row.name,
-                    row.baseSalary,
-                    row.workDays,
-                    row.totalHours,
-                    row.allowances,
-                    row.deductions,
-                    row.netSalary
-                ];
-                
-                csvContent += values.join(',') + '\r\n';
-            });
-            
-            // Create and download file
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            
-            if (link.download !== undefined) {
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `${fileName}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        };
-        
-        // Export payroll to PDF
-        const exportPayrollToPDF = (data, fileName) => {
-            const doc = {
-                pageSize: 'A4',
-                pageOrientation: 'landscape',
-                content: [
-                    { text: fileName, style: 'header' },
-                    { text: '\n' },
-                    {
-                        table: {
-                            headerRows: 1,
-                            widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
-                            body: [
-                                ['الموظف', 'الراتب الأساسي', 'أيام العمل', 'ساعات العمل', 'البدلات', 'الخصومات', 'صافي الراتب'],
-                                ...data.map(row => [
-                                    row.name,
-                                    parseFloat(row.baseSalary).toLocaleString() + ' جنية مصري',
-                                    row.workDays.toString(),
-                                    row.totalHours.toString() + ' ساعة',
-                                    parseFloat(row.allowances).toLocaleString() + ' جنية مصري',
-                                    parseFloat(row.deductions).toLocaleString() + ' جنية مصري',
-                                    parseFloat(row.netSalary).toLocaleString() + ' جنية مصري'
-                                ])
-                            ]
-                        }
-                    }
-                ],
-                styles: {
-                    header: {
-                        fontSize: 18,
-                        bold: true,
-                        alignment: 'center',
-                        margin: [0, 0, 0, 10]
-                    }
-                },
-                defaultStyle: {
-                    alignment: 'right',
-                    font: 'Tajawal'
-                }
-            };
-            
-            pdfMake.createPdf(doc).download(fileName + '.pdf');
-        };
-        
-        // Edit employee
-        const editEmployee = (employeeId) => {
-            // Get employee data
-            const employee = employeesData.find(emp => emp.id === employeeId);
-            if (!employee) return;
-            
-            // Show edit form in modal
-            const modal = document.getElementById('add-employee-modal');
-            const form = document.getElementById('add-employee-form');
-            
-            modal.querySelector('h3').textContent = 'تعديل بيانات الموظف';
-            
-            // Fill form with employee data
-            form.querySelector('[name="name"]').value = employee.name;
-            form.querySelector('[name="phone"]').value = employee.phone || '';
-            form.querySelector('[name="hireDate"]').value = employee.hireDate;
-            form.querySelector('[name="baseSalary"]').value = employee.baseSalary;
-            
-            // Store employee ID in a data attribute
-            form.setAttribute('data-employee-id', employeeId);
-            
-            // Show modal
-            modal.classList.remove('hidden');
-            
-            // Add event listener to form for edit
-            form.removeEventListener('submit', handleAddEmployee);
-            form.addEventListener('submit', handleEditEmployee);
-        };
-        
-        // Handle edit employee form submission
-        const handleEditEmployee = async (e) => {
+        // Auth
+        $('#login-form').on('submit', async e => {
             e.preventDefault();
-            
-            const form = e.target;
-            const employeeId = form.getAttribute('data-employee-id');
-            
-            if (!employeeId) return;
-            
-            const formData = new FormData(form);
-            const employeeData = {
-                name: formData.get('name'),
-                phone: formData.get('phone') || '',
-                hireDate: formData.get('hireDate'),
-                baseSalary: parseFloat(formData.get('baseSalary')),
+            $('#login-error').addClass('hidden');
+            try {
+                await auth.signInWithEmailAndPassword($('#email').val(), $('#password').val());
+            } catch (err) {
+                $('#login-error').text(err.message).removeClass('hidden');
+            }
+        });
+        $('#logout-btn').on('click', () => auth.signOut());
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                $('#auth-section').hide(); $('#app-section').show(); initApp();
+            } else {
+                $('#app-section').hide(); $('#auth-section').show(); $('#login-form')[0].reset();
+            }
+        });
+
+        // Theme toggle
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add('dark');
+        $('#theme-toggle').on('click', () => document.documentElement.classList.toggle('dark'));
+
+        // Tabs
+        $('.tab-btn').on('click', function() {
+            $('.tab-btn').removeClass('tab-active'); $(this).addClass('tab-active');
+            $('.tab-content').removeClass('active'); $(`#${$(this).data('tab')}-tab`).addClass('active');
+            [attendanceTable, employeesTable, reportTable, payrollTable].forEach(tbl => tbl?.columns.adjust().draw());
+            updateCharts();
+        });
+
+        // Load Data
+        async function loadAttendance() {
+            const snap = await db.collection('attendance').orderBy('timestamp','desc').get();
+            attendanceData = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+            initAttendanceTable(attendanceData); updateEmployeeFilter(); $('#loading-section').hide();
+        }
+        async function loadEmployees() {
+            const snap = await db.collection('employees').orderBy('name').get();
+            employeesData = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+            initEmployeesTable(employeesData);
+        }
+
+        // Tables init
+        function initAttendanceTable(data) {
+            attendanceTable?.destroy();
+            attendanceTable = $('#attendance-table').DataTable({
+                data, responsive:true, order:[[1,'desc'] ],
+                columns: [
+                    { data:'name' },
+                    { data:'date', render: d=>formatDateForDisplay(d) },
+                    { data:'time' },
+                    { data:'type' },
+                    { data:'coordinates', render:c=>c?`${c.latitude.toFixed(6)},${c.longitude.toFixed(6)}`:'-' },
+                    { data:'workHours', render: h=>h?`${h} ساعة`:'-' }
+                ],
+                dom:'Bfrtip', buttons:['excel','pdf','print'],
+                language:{ url:'//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json' }
+            });
+        }
+        function initEmployeesTable(data) {
+            employeesTable?.destroy();
+            employeesTable = $('#employees-table').DataTable({
+                data, responsive:true,
+                columns:[
+                    { data:'name' },
+                    { data:null, render: r=>r.phone?`هاتف: ${r.phone}<br/>بريد: ${r.email||'-'}`:'-' },
+                    { data:'hireDate', render: d=>formatDateForDisplay(d) },
+                    { data:'baseSalary', render:s=>`${s.toLocaleString()} جنيه` },
+                    { data:'id', render:id=>`<button class="edit-employee" data-id="${id}"><i class="fas fa-edit"></i></button>
+                                                 <button class="delete-employee" data-id="${id}"><i class="fas fa-trash-alt"></i></button>` }
+                ],
+                dom:'Bfrtip', buttons:['excel','pdf','print'],
+                language:{ url:'//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json' }
+            });
+        }
+
+        // Employee modal
+        $('#add-employee-btn').on('click', ()=>showEmployeeModal());
+        $('.close-modal').on('click', ()=>$('#employee-modal').addClass('hidden'));
+        function showEmployeeModal(emp={}){
+            isEditMode = !!emp.id;
+            $('#modal-title').text(isEditMode? 'تعديل الموظف':'إضافة موظف جديد');
+            $('#employee-id').val(emp.id||'');
+            $('#employee-name-input').val(emp.name||'');
+            $('#employee-phone-input').val(emp.phone||'');
+            $('#employee-hire-date-input').val(emp.hireDate||'');
+            $('#employee-salary-input').val(emp.baseSalary||'');
+            $('#employee-modal').removeClass('hidden');
+        }
+        $('#employee-form').on('submit', async e=>{
+            e.preventDefault();
+            const id = $('#employee-id').val();
+            const data = {
+                name: $('#employee-name-input').val(),
+                phone: $('#employee-phone-input').val(),
+                hireDate: $('#employee-hire-date-input').val(),
+                baseSalary: parseFloat($('#employee-salary-input').val()),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            
-            try {
-                await db.collection('employees').doc(employeeId).update(employeeData);
-                document.getElementById('add-employee-modal').classList.add('hidden');
-                
-                // Reset form event listener
-                form.removeEventListener('submit', handleEditEmployee);
-                form.addEventListener('submit', handleAddEmployee);
-                
-                // Reload employees
-                loadEmployees();
-                updateEmployeeFilter();
-            } catch (error) {
-                console.error('Error updating employee:', error);
-                alert('حدث خطأ أثناء تحديث بيانات الموظف. يرجى المحاولة مرة أخرى.');
+            try{
+                if(id) await db.collection('employees').doc(id).update(data);
+                else { data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await db.collection('employees').add(data);}  
+                $('#employee-modal').addClass('hidden'); loadEmployees(); updateEmployeeFilter();
+            }catch(err){ alert(err.message);}        });
+        $(document).on('click','.edit-employee', e=>{
+            const emp = employeesData.find(x=>x.id===e.currentTarget.dataset.id);
+            showEmployeeModal(emp);
+        });
+        $(document).on('click','.delete-employee', async e=>{
+            if(confirm('تأكيد الحذف؟')){
+                await db.collection('employees').doc(e.currentTarget.dataset.id).delete(); loadEmployees(); updateEmployeeFilter();
             }
-        };
-        
-        // Handle add employee form submission
-        const handleAddEmployee = async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            const employeeData = {
-                name: formData.get('name'),
-                phone: formData.get('phone') || '',
-                hireDate: formData.get('hireDate'),
-                baseSalary: parseFloat(formData.get('baseSalary')),
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            try {
-                await db.collection('employees').add(employeeData);
-                document.getElementById('add-employee-modal').classList.add('hidden');
-                loadEmployees();
-                updateEmployeeFilter();
-            } catch (error) {
-                console.error('Error adding employee:', error);
-                alert('حدث خطأ أثناء إضافة الموظف. يرجى المحاولة مرة أخرى.');
-            }
-        };
-        
-        // Set initial form submission handler
-        document.getElementById('add-employee-form')?.addEventListener('submit', handleAddEmployee);
-        
-        // Delete employee
-        const deleteEmployee = async (employeeId) => {
-            if (confirm('هل أنت متأكد من رغبتك في حذف هذا الموظف؟')) {
-                try {
-                    await db.collection('employees').doc(employeeId).delete();
-                    loadEmployees();
-                    updateEmployeeFilter();
-                } catch (error) {
-                    console.error('Error deleting employee:', error);
-                    alert('حدث خطأ أثناء حذف الموظف. يرجى المحاولة مرة أخرى.');
-                }
-            }
-        };
-        
-        // Initialize application
-        const initApp = () => {
-            console.log("بدء تشغيل التطبيق...");
-            loadAttendance();
-            loadEmployees();
-            initCharts();
-            
-            // Pre-load some dates
-            const now = new Date();
-            document.getElementById('date-to').value = formatDate(now);
-            
-            const lastMonth = new Date();
-            lastMonth.setMonth(now.getMonth() - 1);
-            document.getElementById('date-from').value = formatDate(lastMonth);
-            
-            const currentMonth = formatDate(now).substring(0, 7);
-            document.getElementById('report-month').value = currentMonth;
-            document.getElementById('payroll-month').value = currentMonth;
-        };
+        });
+
+        // Filters
+        $('#filter-date').on('click',()=> filterAttendance(r=>{
+            const from = $('#date-from').val(), to = $('#date-to').val();
+            return (!from||r.date>=from)&&(!to||r.date<=to);
+        }));
+        $('#filter-employee').on('click',()=> filterAttendance(r=>$('#employee-filter').val()?r.name===$('#employee-filter').val():true));
+        $('#filter-type').on('click',()=> filterAttendance(r=>$('#type-filter').val()?r.type===$('#type-filter').val():true));
+        function filterAttendance(fn){ const filtered=attendanceData.filter(fn); initAttendanceTable(filtered);}        
+        function updateEmployeeFilter(){ const sel=$('#employee-filter').empty().append('<option>جميع الموظفين</option>');
+            [...new Set(attendanceData.map(r=>r.name))].sort().forEach(name=>sel.append(`<option>${name}</option>`));
+        }
+
+        // Charts
+        function initCharts(){
+            attendanceChart = new Chart($('#attendance-chart'),{type:'bar',data:{labels:[],datasets:[{label:'حضور',data:[]},{label:'غياب',data:[]} ]},options:{responsive:true}});
+            hoursChart = new Chart($('#hours-chart'),{type:'pie',data:{labels:[],datasets:[{data:[]} ]},options:{responsive:true}});
+        }
+        function updateCharts(){ if(!attendanceData.length)return;
+            // Monthly attendance
+            const months={}, now=new Date(); for(let i=0;i<6;i++){ const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+                const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                months[key]={att:0,abs:22,name:d.toLocaleDateString('ar-SA',{month:'long',year:'numeric'})}; }
+            attendanceData.filter(r=>r.type==='حضور').forEach(r=>{
+                const m=r.date.slice(0,7); if(months[m]){ months[m].att++; months[m].abs--; }
+            });
+            const keys=Object.keys(months).sort();
+            attendanceChart.data.labels=keys.map(k=>months[k].name);
+            attendanceChart.data.datasets[0].data=keys.map(k=>months[k].att);
+            attendanceChart.data.datasets[1].data=keys.map(k=>months[k].abs);
+            attendanceChart.update();
+            // Hours
+            const hrs={}; attendanceData.forEach(r=>{ if(r.workHours) hrs[r.name]=(hrs[r.name]||0)+r.workHours; });
+            const top=Object.entries(hrs).sort((a,b)=>b[1]-a[1]).slice(0,8);
+            hoursChart.data.labels=top.map(t=>t[0]); hoursChart.data.datasets[0].data=top.map(t=>t[1]); hoursChart.update();
+        }
+
+        // Reports & Payroll
+        function getWorkingDays(start,end){ let c=0,d=new Date(start); while(d<=end){ if(d.getDay()!==5 && d.getDay()!==6) c++; d.setDate(d.getDate()+1);} return c; }
+
+        $('#generate-report').on('click',()=>{
+            const m=$('#report-month').val(); if(!m)return alert('اختر الشهر');
+            const [y,mo]=m.split('-'), start=`${m}-01`, end=`${y}-${mo}-${new Date(y,mo,0).getDate()}`;
+            $('#report-title').text(new Date(y,mo-1).toLocaleDateString('ar-SA',{month:'long',year:'numeric'}));
+            const period=attendanceData.filter(r=>r.date>=start&&r.date<=end);
+            const days=getWorkingDays(new Date(start),new Date(end));
+            const report={};
+            period.forEach(r=>{ if(!report[r.name]) report[r.name]={name:r.name,attDays:0,late:0,totalH:0};
+                if(r.type==='حضور'){ report[r.name].attDays++; if(+r.time.split(':')[0]>=9) report[r.name].late++; }
+                report[r.name].totalH+=r.workHours||0;
+            });
+            const tblData=Object.values(report).map(o=>({
+                name:o.name,
+                attendanceDays:o.attDays,
+                absenceDays:days-o.attDays,
+                totalHours:o.totalH.toFixed(2),
+                averageHours: o.attDays? (o.totalH/o.attDays).toFixed(2):0,
+                lateCount:o.late
+            }));
+            reportTable?.destroy();
+            reportTable=$('#report-table').DataTable({ data:tblData,paging:false,searching:false,info:false,responsive:true,columns:[
+                {data:'name'}, {data:'attendanceDays'}, {data:'absenceDays'}, {data:'totalHours',render:d=>d+' ساعة'}, {data:'averageHours',render:d=>d+' ساعة'}, {data:'lateCount'}
+            ],language:{url:'//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'} });
+        });
+
+        $('#calculate-payroll').on('click',()=>{
+            const m=$('#payroll-month').val(); if(!m)return alert('اختر الشهر');
+            const [y,mo]=m.split('-'), start=`${m}-01`, end=`${y}-${mo}-${new Date(y,mo,0).getDate()}`;
+            $('#payroll-title').text(new Date(y,mo-1).toLocaleDateString('ar-SA',{month:'long',year:'numeric'}));
+            const period=attendanceData.filter(r=>r.date>=start&&r.date<=end);
+            const days=getWorkingDays(new Date(start),new Date(end));
+            const payroll=[];
+            employeesData.forEach(emp=>{
+                const rec=period.filter(r=>r.name===emp.name);
+                const attDays=new Set(rec.filter(r=>r.type==='حضور').map(r=>r.date)).size;
+                const totalH=rec.reduce((s,r)=>s+(r.workHours||0),0);
+                const allowance=attDays/days>=0.95?emp.baseSalary*0.1:0;
+                const deduction=(days-attDays)*(emp.baseSalary/days);
+                const net=emp.baseSalary+allowance-deduction;
+                payroll.push({
+                    name:emp.name,
+                    baseSalary:emp.baseSalary,
+                    workDays:attDays,
+                    totalHours:totalH.toFixed(2),
+                    allowances:allowance.toFixed(2),
+                    deductions:deduction.toFixed(2),
+                    netSalary:net.toFixed(2)
+                });
+            });
+            payrollTable?.destroy();
+            payrollTable=$('#payroll-table').DataTable({ data:payroll,paging:false,searching:false,info:false,responsive:true,columns:[
+                {data:'name'},{data:'baseSalary',render:d=>`${parseFloat(d).toLocaleString()} جنيه`},
+                {data:'workDays'},{data:'totalHours',render:d=>d+' ساعة'},{data:'allowances',render:d=>`${parseFloat(d).toLocaleString()} جنيه`},
+                {data:'deductions',render:d=>`${parseFloat(d).toLocaleString()} جنيه`},{data:'netSalary',render:d=>`${parseFloat(d).toLocaleString()} جنيه`}
+            ],language:{url:'//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'} });
+        });
+
+        // Initialize
+        function initApp(){
+            loadAttendance(); loadEmployees(); initCharts();
+            const now=new Date(); $('#date-to').val(formatDate(now));
+            const lm=new Date(now.setMonth(now.getMonth()-1)); $('#date-from').val(formatDate(lm));
+            const cm=formatDate(); $('#report-month,#payroll-month').val(cm.slice(0,7));
+        }
     </script>
 </body>
 </html>
