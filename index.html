@@ -1,916 +1,1547 @@
 <!DOCTYPE html>
-<html lang="en" dir="auto">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase to Excel Exporter</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <title>إدارة بيانات الحضور والانصراف</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.3/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.5/css/buttons.dataTables.min.css">
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.3/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.5/js/dataTables.buttons.min.js"></script>
+    
+    <!-- Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.5/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.5/js/buttons.print.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        primary: '#5D5CDE'
+                        primary: '#5D5CDE',
+                        secondary: '#4C51BF',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                        dark: '#181818',
+                    },
+                    fontFamily: {
+                        'tajawal': ['Tajawal', 'sans-serif'],
                     }
                 }
-            }
-        };
+            },
+            darkMode: 'class',
+        }
     </script>
+    
     <style>
-        .resizable-th {
+        body {
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        .dark body {
+            background-color: #181818;
+            color: #ffffff;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #5D5CDE;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        
+        .dark .loading-spinner {
+            border-color: rgba(255, 255, 255, 0.1);
+            border-left-color: #5D5CDE;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* تخصيص نمط DataTables */
+        table.dataTable {
+            width: 100% !important;
+            border-collapse: collapse !important;
+        }
+        
+        table.dataTable th, table.dataTable td {
+            padding: 0.75rem;
+            text-align: right;
+        }
+        
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            margin-bottom: 1rem;
+            color: #4a5568;
+        }
+        
+        .dark .dataTables_wrapper .dataTables_filter,
+        .dark .dataTables_wrapper .dataTables_length,
+        .dark .dataTables_wrapper .dataTables_info,
+        .dark .dataTables_wrapper .dataTables_paginate {
+            color: #cbd5e0;
+        }
+        
+        .dataTables_wrapper .dataTables_filter input {
+            margin-right: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .dark .dataTables_wrapper .dataTables_filter input {
+            background-color: #2d3748;
+            border-color: #4a5568;
+            color: #cbd5e0;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            margin: 0 0.25rem;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background-color: #5D5CDE !important;
+            border-color: #5D5CDE !important;
+            color: white !important;
+        }
+        
+        .dt-buttons .dt-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            margin-right: 0.5rem;
+            background-color: #5D5CDE;
+            color: white;
+            border: none;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .dt-buttons .dt-button:hover {
+            background-color: #4C51BF;
+        }
+        
+        /* دعم الوضع المظلم للجداول */
+        .dark table.dataTable {
+            color: #ffffff;
+        }
+        
+        .dark table.dataTable thead th,
+        .dark table.dataTable tfoot th {
+            background-color: #2d3748;
+            color: #e2e8f0;
+        }
+        
+        .dark table.dataTable tbody tr {
+            background-color: #1a202c;
+        }
+        
+        .dark table.dataTable tbody tr:hover {
+            background-color: #2d3748;
+        }
+        
+        /* تخصيص تبويبات */
+        .tab-active {
+            background-color: #5D5CDE;
+            color: white;
+        }
+        
+        .dark .tab-active {
+            background-color: #4C51BF;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .chart-container {
             position: relative;
-            cursor: col-resize;
-        }
-        .resizable-th::after {
-            content: "";
-            position: absolute;
-            right: 0;
-            top: 25%;
-            height: 50%;
-            width: 4px;
-            background-color: #e0e0e0;
-            opacity: 0.5;
-            cursor: col-resize;
-        }
-        .resizable-th:hover::after {
-            opacity: 1;
-            background-color: #aaa;
-        }
-        .table-sort-icon {
-            display: inline-block;
-            width: 0;
-            height: 0;
-            margin-left: 6px;
-            vertical-align: middle;
-        }
-        .table-sort-icon.asc {
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-bottom: 4px solid currentColor;
-        }
-        .table-sort-icon.desc {
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-top: 4px solid currentColor;
-        }
-        .dragging {
-            opacity: 0.7;
-            background-color: #f3f4f6;
-        }
-        .sortable-ghost {
-            opacity: 0.2;
-            background-color: #e5e7eb;
-        }
-        
-        @media (prefers-color-scheme: dark) {
-            .dragging {
-                background-color: #374151;
-            }
-            .sortable-ghost {
-                background-color: #4b5563;
-            }
-        }
-        
-        /* For RTL support */
-        [dir="rtl"] .resizable-th::after {
-            right: auto;
-            left: 0;
-        }
-        [dir="rtl"] .table-sort-icon {
-            margin-left: 0;
-            margin-right: 6px;
+            height: 300px;
+            width: 100%;
         }
     </style>
 </head>
-<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-    <div class="container mx-auto p-4 max-w-6xl">
-        <h1 class="text-3xl font-bold text-center mb-8 text-primary dark:text-primary">Firebase to Excel Exporter</h1>
+
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-primary mb-2">إدارة بيانات الحضور والانصراف</h1>
+            <p class="text-gray-600 dark:text-gray-300">تحليل وإدارة سجلات الحضور والانصراف والرواتب</p>
+        </header>
         
-        <!-- Step 1: Firebase Config (Hidden) -->
-        <div id="step1" class="hidden">
-            <input id="apiKey" type="hidden" value="AIzaSyBGmPBvFrap25W2d-BueVCjHmWJh5vAaiU">
-            <input id="authDomain" type="hidden" value="reg-time.firebaseapp.com">
-            <input id="projectId" type="hidden" value="reg-time">
-            <input id="storageBucket" type="hidden" value="reg-time.firebasestorage.app">
-            <input id="messagingSenderId" type="hidden" value="388216258796">
-            <input id="appId" type="hidden" value="1:388216258796:web:61ebca12e7c6c9e05765c9">
-        </div>
-
-        <!-- Step 2: Authentication -->
-        <div id="step2" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
-            <h2 class="text-xl font-semibold mb-4">Step 2: Authentication</h2>
-            <div id="authStatus" class="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md">
-                Not authenticated
-            </div>
-            <div id="loginForm">
-                <div class="mb-4">
-                    <label class="block mb-2 text-sm font-medium">Email</label>
-                    <input id="email" type="email" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Email">
+        <!-- قسم تسجيل الدخول -->
+        <div id="auth-section" class="mb-8 max-w-md mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">تسجيل الدخول</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
+                    <input type="email" id="email" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
                 </div>
-                <div class="mb-4">
-                    <label class="block mb-2 text-sm font-medium">Password</label>
-                    <input id="password" type="password" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Password">
+                <div>
+                    <label for="password" class="block text-gray-700 dark:text-gray-300 mb-1">كلمة المرور</label>
+                    <input type="password" id="password" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
                 </div>
-                <button id="login" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">Login</button>
-            </div>
-            <div id="logoutSection" class="hidden">
-                <p class="mb-2" id="userEmail"></p>
-                <button id="logout" class="px-6 py-2 bg-red-500 text-white rounded-md hover:bg-opacity-90 transition-all">Logout</button>
-            </div>
+                <div>
+                    <button type="submit" class="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-white rounded-md transition duration-200">
+                        تسجيل الدخول
+                    </button>
+                </div>
+                <div id="login-error" class="text-danger hidden"></div>
+            </form>
         </div>
-
-        <!-- Step 3: Query Configuration -->
-        <div id="step3" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
-            <h2 class="text-xl font-semibold mb-4">Step 3: Firestore Query</h2>
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium">Collection Path</label>
-                <input id="collectionPath" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Collection path (e.g., attendance)" value="attendance">
+        
+        <!-- القسم الرئيسي للتطبيق (يظهر بعد تسجيل الدخول) -->
+        <div id="app-section" class="hidden">
+            <!-- شريط التبويبات -->
+            <div class="flex flex-wrap mb-6 border-b border-gray-200 dark:border-gray-700">
+                <button class="tab-btn tab-active py-2 px-4 text-sm font-medium rounded-t-lg" data-tab="attendance">
+                    <i class="fas fa-clipboard-list mr-1"></i> سجلات الحضور
+                </button>
+                <button class="tab-btn py-2 px-4 text-sm font-medium" data-tab="employees">
+                    <i class="fas fa-users mr-1"></i> الموظفين
+                </button>
+                <button class="tab-btn py-2 px-4 text-sm font-medium" data-tab="reports">
+                    <i class="fas fa-chart-bar mr-1"></i> التقارير
+                </button>
+                <button class="tab-btn py-2 px-4 text-sm font-medium" data-tab="payroll">
+                    <i class="fas fa-money-bill-wave mr-1"></i> المرتبات
+                </button>
+                
+                <div class="mr-auto flex items-center">
+                    <button id="logout-btn" class="text-sm text-gray-600 dark:text-gray-400 hover:text-danger flex items-center">
+                        <i class="fas fa-sign-out-alt mr-1"></i> تسجيل الخروج
+                    </button>
+                    <button id="theme-toggle" class="mr-4 text-gray-600 dark:text-gray-300">
+                        <i class="fas fa-moon dark:hidden"></i>
+                        <i class="fas fa-sun hidden dark:block"></i>
+                    </button>
+                </div>
             </div>
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium">Document ID (Optional)</label>
-                <input id="documentId" type="text" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Document ID (leave blank to get all)" value="1BUulOjoUiPuxQloMec9">
+            
+            <!-- قسم التحميل -->
+            <div id="loading-section" class="flex flex-col items-center justify-center py-12">
+                <div class="loading-spinner mb-4"></div>
+                <p class="text-gray-600 dark:text-gray-400">جاري تحميل البيانات...</p>
             </div>
-            <div class="mb-4">
-                <label class="block mb-2 text-sm font-medium">Limit</label>
-                <input id="limit" type="number" class="w-full px-4 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Limit (default: 100)" value="100">
-            </div>
-            <button id="fetchData" class="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all">Fetch Data</button>
-        </div>
-
-        <!-- Step 4: Results and Export -->
-        <div id="step4" class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
-            <div class="flex flex-wrap justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold">Step 4: Results</h2>
-                <div class="flex flex-wrap gap-2 mt-2 sm:mt-0">
-                    <div class="relative">
-                        <button id="tableOptionsBtn" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
-                            Table Options
-                        </button>
-                        <div id="tableOptionsMenu" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 hidden">
-                            <div class="p-3">
-                                <div class="mb-2">
-                                    <label class="block mb-1 text-sm font-medium">Table Size</label>
-                                    <select id="tableWidth" class="w-full px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                        <option value="auto">Auto (Horizontal Scroll)</option>
-                                        <option value="full">Full Width (Compact)</option>
-                                        <option value="max">Maximum Width (Show All)</option>
-                                    </select>
-                                </div>
-                                <div class="mb-2">
-                                    <label class="block mb-1 text-sm font-medium">Direction</label>
-                                    <select id="tableDirection" class="w-full px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                        <option value="auto">Auto</option>
-                                        <option value="ltr">Left to Right (LTR)</option>
-                                        <option value="rtl">Right to Left (RTL)</option>
-                                    </select>
-                                </div>
-                                <div class="mb-2">
-                                    <label class="flex items-center text-sm">
-                                        <input type="checkbox" id="alternateRowColors" class="mr-2" checked>
-                                        Alternate Row Colors
-                                    </label>
+            
+            <!-- محتوى التبويبات -->
+            <div id="tab-content-container">
+                <!-- تبويب سجلات الحضور -->
+                <div id="attendance-tab" class="tab-content active">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+                        <div class="flex flex-wrap gap-4 mb-4">
+                            <div class="flex-1 min-w-[200px]">
+                                <label class="block text-gray-700 dark:text-gray-300 mb-1">فلترة حسب التاريخ</label>
+                                <div class="flex gap-2">
+                                    <input type="date" id="date-from" class="flex-1 p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
+                                    <input type="date" id="date-to" class="flex-1 p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
+                                    <button id="filter-date" class="py-2 px-4 bg-primary text-white rounded-md">
+                                        <i class="fas fa-filter"></i>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="p-3 border-t border-gray-200 dark:border-gray-700">
-                                <button id="resetTableSettings" class="w-full px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md">Reset Settings</button>
+                            <div class="flex-1 min-w-[200px]">
+                                <label class="block text-gray-700 dark:text-gray-300 mb-1">فلترة حسب الموظف</label>
+                                <div class="flex gap-2">
+                                    <select id="employee-filter" class="flex-1 p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
+                                        <option value="">جميع الموظفين</option>
+                                    </select>
+                                    <button id="filter-employee" class="py-2 px-4 bg-primary text-white rounded-md">
+                                        <i class="fas fa-filter"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="p-3 border-t border-gray-200 dark:border-gray-700">
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Tip: Drag column headers to reorder. Click headers to sort.</p>
+                            <div class="flex-1 min-w-[200px]">
+                                <label class="block text-gray-700 dark:text-gray-300 mb-1">فلترة حسب نوع التسجيل</label>
+                                <div class="flex gap-2">
+                                    <select id="type-filter" class="flex-1 p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
+                                        <option value="">الكل</option>
+                                        <option value="حضور">حضور</option>
+                                        <option value="انصراف">انصراف</option>
+                                    </select>
+                                    <button id="filter-type" class="py-2 px-4 bg-primary text-white rounded-md">
+                                        <i class="fas fa-filter"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table id="attendance-table" class="w-full stripe hover">
+                                <thead>
+                                    <tr>
+                                        <th>الموظف</th>
+                                        <th>التاريخ</th>
+                                        <th>الوقت</th>
+                                        <th>نوع التسجيل</th>
+                                        <th>الموقع</th>
+                                        <th>ساعات العمل</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- تبويب الموظفين -->
+                <div id="employees-tab" class="tab-content">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+                        <div class="flex justify-between mb-4">
+                            <h3 class="text-lg font-semibold">قائمة الموظفين</h3>
+                            <button id="add-employee-btn" class="py-2 px-4 bg-success text-white rounded-md">
+                                <i class="fas fa-plus mr-1"></i> إضافة موظف
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table id="employees-table" class="w-full stripe hover">
+                                <thead>
+                                    <tr>
+                                        <th>الاسم</th>
+                                        <th>البريد الإلكتروني</th>
+                                        <th>الهاتف</th>
+                                        <th>تاريخ التعيين</th>
+                                        <th>الراتب الأساسي</th>
+                                        <th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- تبويب التقارير -->
+                <div id="reports-tab" class="tab-content">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold mb-4">نسبة الحضور والغياب الشهرية</h3>
+                            <div class="chart-container">
+                                <canvas id="attendance-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold mb-4">ساعات العمل حسب الموظف</h3>
+                            <div class="chart-container">
+                                <canvas id="hours-chart"></canvas>
                             </div>
                         </div>
                     </div>
-                    <button id="toggleColumns" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all">Toggle Columns</button>
-                    <button id="exportExcel" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all hidden">Export to Excel</button>
+                    
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">تقرير أداء الموظفين</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-gray-700 dark:text-gray-300 mb-1">اختر الشهر</label>
+                            <input type="month" id="report-month" class="p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
+                            <button id="generate-report" class="mr-2 py-2 px-4 bg-primary text-white rounded-md">
+                                إنشاء التقرير
+                            </button>
+                        </div>
+                        
+                        <div id="report-container" class="hidden">
+                            <div class="flex justify-between mb-4">
+                                <h4 class="font-medium">تقرير الشهر: <span id="report-title"></span></h4>
+                                <div>
+                                    <button id="export-excel" class="py-1 px-3 bg-success text-white rounded-md text-sm">
+                                        <i class="fas fa-file-excel mr-1"></i> تصدير Excel
+                                    </button>
+                                    <button id="export-pdf" class="py-1 px-3 bg-danger text-white rounded-md text-sm mr-2">
+                                        <i class="fas fa-file-pdf mr-1"></i> تصدير PDF
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="overflow-x-auto">
+                                <table id="report-table" class="w-full stripe hover">
+                                    <thead>
+                                        <tr>
+                                            <th>الموظف</th>
+                                            <th>أيام الحضور</th>
+                                            <th>أيام الغياب</th>
+                                            <th>مجموع ساعات العمل</th>
+                                            <th>متوسط ساعات العمل اليومية</th>
+                                            <th>عدد مرات التأخير</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- تبويب المرتبات -->
+                <div id="payroll-tab" class="tab-content">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">حساب المرتبات الشهرية</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-gray-700 dark:text-gray-300 mb-1">اختر الشهر</label>
+                            <div class="flex gap-2">
+                                <input type="month" id="payroll-month" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
+                                <button id="calculate-payroll" class="py-2 px-4 bg-primary text-white rounded-md">
+                                    حساب المرتبات
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="payroll-container" class="hidden">
+                            <div class="flex justify-between mb-4">
+                                <h4 class="font-medium">مرتبات شهر: <span id="payroll-title"></span></h4>
+                                <div>
+                                    <button id="export-payroll-excel" class="py-1 px-3 bg-success text-white rounded-md text-sm">
+                                        <i class="fas fa-file-excel mr-1"></i> تصدير Excel
+                                    </button>
+                                    <button id="export-payroll-pdf" class="py-1 px-3 bg-danger text-white rounded-md text-sm mr-2">
+                                        <i class="fas fa-file-pdf mr-1"></i> تصدير PDF
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="overflow-x-auto">
+                                <table id="payroll-table" class="w-full stripe hover">
+                                    <thead>
+                                        <tr>
+                                            <th>الموظف</th>
+                                            <th>الراتب الأساسي</th>
+                                            <th>عدد أيام العمل</th>
+                                            <th>إجمالي ساعات العمل</th>
+                                            <th>البدلات</th>
+                                            <th>الخصومات</th>
+                                            <th>صافي الراتب</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Column toggle panel -->
-            <div id="columnTogglePanel" class="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-md hidden">
-                <h3 class="text-sm font-semibold mb-2">Toggle Column Visibility</h3>
-                <div id="columnToggles" class="flex flex-wrap gap-2"></div>
-            </div>
-            
-            <div id="loadingData" class="flex flex-col items-center py-10 hidden">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p class="mt-4">Loading data...</p>
-            </div>
-            
-            <div id="tableContainer" class="hidden">
-                <div id="dataTableContainer" class="overflow-auto">
-                    <table id="dataTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-100 dark:bg-gray-700">
-                            <tr id="tableHeader"></tr>
-                        </thead>
-                        <tbody id="tableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700"></tbody>
-                    </table>
+        </div>
+        
+        <!-- نماذج مخفية -->
+        <div id="add-employee-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 max-w-md w-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">إضافة موظف جديد</h3>
+                    <button class="close-modal text-gray-500">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span id="rowCount">0</span> rows found.
-                </div>
-            </div>
-            
-            <div id="noDataMessage" class="py-10 text-center hidden">
-                <p>No data found. Please check your query parameters.</p>
+                
+                <form id="add-employee-form" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 mb-1">الاسم الكامل</label>
+                        <input type="text" name="name" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
+                        <input type="email" name="email" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف</label>
+                        <input type="tel" name="phone" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 mb-1">تاريخ التعيين</label>
+                        <input type="date" name="hireDate" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 mb-1">الراتب الأساسي</label>
+                        <input type="number" name="baseSalary" class="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" required>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2">
+                        <button type="button" class="close-modal py-2 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md">
+                            إلغاء
+                        </button>
+                        <button type="submit" class="py-2 px-4 bg-success text-white rounded-md">
+                            حفظ
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-
+    
     <script>
-        // Dark mode detection
+        // Check for dark mode preference
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.classList.add('dark');
         }
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-            if (event.matches) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
+        
+        // Dark mode toggle
+        document.getElementById('theme-toggle')?.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
         });
-
-        // Language direction detection
-        function setDirection() {
-            const direction = document.getElementById('tableDirection').value;
-            if (direction === 'auto') {
-                // Auto-detect language from browser
-                const isRTL = ['ar', 'he', 'fa', 'ur'].includes(navigator.language.substring(0, 2));
-                document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
-            } else {
-                document.documentElement.setAttribute('dir', direction);
-            }
-        }
-
+        
+        // Firebase configuration
+        const firebaseConfig = {
+              apiKey: "AIzaSyBz3vodmnTMHpTJ1fXcmjOnmfgU0DkqnIo",
+              authDomain: "attendance-fd328.firebaseapp.com",
+              projectId: "attendance-fd328",
+              storageBucket: "attendance-fd328.firebasestorage.app",
+              messagingSenderId: "254552859337",
+              appId: "1:254552859337:web:1f49c2e5efbd651f32e318",
+              measurementId: "G-DNW0R0DPJ8"
+        };
+        
         // Global variables
-        let firebaseApp;
-        let db;
-        let fetchedData = [];
-        let headers = [];
-        let visibleColumns = new Set();
-        let sortConfig = { column: null, direction: 'asc' };
-        let columnWidths = {};
-        let sortable; // SortableJS instance for reordering columns
-
-        // Auto-configure Firebase on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            configureFirebase();
-            setupTableOptions();
-            setDirection();
-        });
-
-        function configureFirebase() {
-            const config = {
-                apiKey: document.getElementById('apiKey').value,
-                authDomain: document.getElementById('authDomain').value,
-                projectId: document.getElementById('projectId').value,
-                storageBucket: document.getElementById('storageBucket').value,
-                messagingSenderId: document.getElementById('messagingSenderId').value,
-                appId: document.getElementById('appId').value,
-                measurementId: "G-4Q8T869WC1"
-            };
-
-            try {
-                // Initialize Firebase
-                firebaseApp = firebase.initializeApp(config);
-                db = firebaseApp.firestore();
-                
-                // Show Step 2
-                document.getElementById('step1').classList.add('hidden');
-                document.getElementById('step2').classList.remove('hidden');
-                
-                // Setup auth state change listener
-                firebase.auth().onAuthStateChanged(user => {
-                    if (user) {
-                        // User is signed in
-                        document.getElementById('authStatus').textContent = 'Authenticated';
-                        document.getElementById('authStatus').classList.remove('bg-yellow-100', 'dark:bg-yellow-900', 'text-yellow-800', 'dark:text-yellow-200');
-                        document.getElementById('authStatus').classList.add('bg-green-100', 'dark:bg-green-900', 'text-green-800', 'dark:text-green-200');
-                        
-                        document.getElementById('loginForm').classList.add('hidden');
-                        document.getElementById('logoutSection').classList.remove('hidden');
-                        document.getElementById('userEmail').textContent = `Logged in as: ${user.email}`;
-                        
-                        // Show Step 3
-                        document.getElementById('step3').classList.remove('hidden');
-                    } else {
-                        // User is signed out
-                        document.getElementById('authStatus').textContent = 'Not authenticated';
-                        document.getElementById('authStatus').classList.remove('bg-green-100', 'dark:bg-green-900', 'text-green-800', 'dark:text-green-200');
-                        document.getElementById('authStatus').classList.add('bg-yellow-100', 'dark:bg-yellow-900', 'text-yellow-800', 'dark:text-yellow-200');
-                        
-                        document.getElementById('loginForm').classList.remove('hidden');
-                        document.getElementById('logoutSection').classList.add('hidden');
-                        
-                        // Hide Step 3 and 4
-                        document.getElementById('step3').classList.add('hidden');
-                        document.getElementById('step4').classList.add('hidden');
-                    }
-                });
-            } catch (error) {
-                alert(`Error initializing Firebase: ${error.message}`);
-            }
-        }
-
-        function setupTableOptions() {
-            // Table options dropdown toggle
-            document.getElementById('tableOptionsBtn').addEventListener('click', () => {
-                const menu = document.getElementById('tableOptionsMenu');
-                menu.classList.toggle('hidden');
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (event) => {
-                const menu = document.getElementById('tableOptionsMenu');
-                const button = document.getElementById('tableOptionsBtn');
-                if (!menu.classList.contains('hidden') && !menu.contains(event.target) && !button.contains(event.target)) {
-                    menu.classList.add('hidden');
-                }
-            });
-            
-            // Table width setting
-            document.getElementById('tableWidth').addEventListener('change', applyTableSettings);
-            
-            // Row color setting
-            document.getElementById('alternateRowColors').addEventListener('change', applyTableSettings);
-            
-            // Direction setting
-            document.getElementById('tableDirection').addEventListener('change', () => {
-                setDirection();
-                applyTableSettings();
-            });
-            
-            // Reset settings
-            document.getElementById('resetTableSettings').addEventListener('click', () => {
-                document.getElementById('tableWidth').value = 'auto';
-                document.getElementById('tableDirection').value = 'auto';
-                document.getElementById('alternateRowColors').checked = true;
-                setDirection();
-                applyTableSettings();
-            });
-            
-            // Toggle columns button
-            document.getElementById('toggleColumns').addEventListener('click', () => {
-                const panel = document.getElementById('columnTogglePanel');
-                panel.classList.toggle('hidden');
-            });
-        }
-
-        function applyTableSettings() {
-            const tableWidth = document.getElementById('tableWidth').value;
-            const alternateRows = document.getElementById('alternateRowColors').checked;
-            const table = document.getElementById('dataTable');
-            const tableContainer = document.getElementById('dataTableContainer');
-            
-            // Apply table width setting
-            if (tableWidth === 'auto') {
-                tableContainer.classList.add('overflow-auto');
-                table.classList.add('min-w-full');
-                table.classList.remove('w-full', 'table-fixed');
-                tableContainer.style.maxWidth = '';
-            } else if (tableWidth === 'full') {
-                tableContainer.classList.remove('overflow-auto');
-                table.classList.add('w-full');
-                table.classList.remove('min-w-full', 'table-fixed');
-                tableContainer.style.maxWidth = '100%';
-            } else if (tableWidth === 'max') {
-                tableContainer.classList.add('overflow-auto');
-                table.classList.add('table-fixed');
-                table.classList.remove('min-w-full', 'w-full');
-                table.style.width = (headers.length * 200) + 'px';
-            }
-            
-            // Apply row colors setting
-            const rows = document.querySelectorAll('#tableBody tr');
-            rows.forEach((row, index) => {
-                row.classList.remove('bg-white', 'bg-gray-50', 'dark:bg-gray-800', 'dark:bg-gray-700');
-                if (alternateRows) {
-                    if (index % 2 === 0) {
-                        row.classList.add('bg-white', 'dark:bg-gray-800');
-                    } else {
-                        row.classList.add('bg-gray-50', 'dark:bg-gray-700');
-                    }
-                } else {
-                    row.classList.add('bg-white', 'dark:bg-gray-800');
-                }
-            });
-        }
-
-        // Step 2: Authentication
-        document.getElementById('login').addEventListener('click', () => {
+        let attendanceTable, employeesTable, reportTable, payrollTable;
+        let attendanceData = [];
+        let employeesData = [];
+        let attendanceChart, hoursChart;
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // Format date as YYYY-MM-DD
+        const formatDate = (date) => {
+            const d = date || new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        
+        // Format date for display
+        const formatDateForDisplay = (dateStr) => {
+            if (!dateStr) return '';
+            const [year, month, day] = dateStr.split('-');
+            return `${day}/${month}/${year}`;
+        };
+        
+        // Authentication handling
+        document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            
-            if (!email || !password) {
-                alert('Please enter email and password');
-                return;
-            }
-            
-            firebase.auth().signInWithEmailAndPassword(email, password)
-                .catch(error => {
-                    alert(`Login error: ${error.message}`);
-                });
-        });
-
-        document.getElementById('logout').addEventListener('click', () => {
-            firebase.auth().signOut();
-        });
-
-        // Step 3: Fetch Data
-        document.getElementById('fetchData').addEventListener('click', async () => {
-            const collectionPath = document.getElementById('collectionPath').value;
-            const documentId = document.getElementById('documentId').value.trim();
-            const limit = parseInt(document.getElementById('limit').value) || 100;
-            
-            if (!collectionPath) {
-                alert('Please enter a collection path');
-                return;
-            }
-            
-            // Show loading state
-            document.getElementById('step4').classList.remove('hidden');
-            document.getElementById('loadingData').classList.remove('hidden');
-            document.getElementById('tableContainer').classList.add('hidden');
-            document.getElementById('noDataMessage').classList.add('hidden');
-            document.getElementById('exportExcel').classList.add('hidden');
-            document.getElementById('columnTogglePanel').classList.add('hidden');
+            const errorElement = document.getElementById('login-error');
             
             try {
-                // Try different approaches to get the data
-                console.log("Starting data fetch with multiple strategies");
-                
-                // First approach: Try direct collection query with where clause
-                console.log("Strategy 1: Direct collection query");
-                if (documentId) {
-                    const directQuery = await db.collection(collectionPath)
-                        .where("__name__", ">=", documentId)
-                        .limit(limit)
-                        .get();
-                    
-                    if (!directQuery.empty) {
-                        console.log(`Found ${directQuery.docs.length} documents directly`);
-                        fetchedData = directQuery.docs.map(doc => ({
-                            id: doc.id,
-                            strategy: "direct_query",
-                            ...doc.data()
-                        }));
-                    } else {
-                        console.log("Direct query returned no results, trying next approach");
-                    }
-                }
-                
-                // If we have no results yet, try other strategies
-                if (fetchedData.length === 0 && documentId) {
-                    // Second approach: Get specific document and look for arrays or maps
-                    console.log("Strategy 2: Document with arrays/maps");
-                    const docRef = db.collection(collectionPath).doc(documentId);
-                    const docSnapshot = await docRef.get();
-                    
-                    if (docSnapshot.exists) {
-                        console.log("Document exists, checking for array or map fields");
-                        const docData = docSnapshot.data();
-                        
-                        // Initialize with the document itself
-                        const docRow = {id: docSnapshot.id, strategy: "document", ...docData};
-                        
-                        // Look for any array fields that could contain our data
-                        let foundArrayData = false;
-                        for (const [key, value] of Object.entries(docData)) {
-                            if (Array.isArray(value) && value.length > 0) {
-                                console.log(`Found array field: ${key} with ${value.length} items`);
-                                // Extract array items to individual rows
-                                const arrayData = value.map((item, index) => {
-                                    // If item is an object, flatten it
-                                    if (item && typeof item === 'object') {
-                                        return {
-                                            id: `${docSnapshot.id}_${key}_${index}`,
-                                            parent_doc: docSnapshot.id,
-                                            array_field: key,
-                                            array_index: index,
-                                            strategy: "array_field",
-                                            ...item
-                                        };
-                                    } else {
-                                        // For primitive values
-                                        return {
-                                            id: `${docSnapshot.id}_${key}_${index}`,
-                                            parent_doc: docSnapshot.id,
-                                            array_field: key,
-                                            array_index: index,
-                                            strategy: "array_field",
-                                            value: item
-                                        };
-                                    }
-                                });
-                                fetchedData = [...arrayData];
-                                foundArrayData = true;
-                            }
-                        }
-                        
-                        // If no array data found, just use the document itself
-                        if (!foundArrayData) {
-                            fetchedData = [docRow];
-                        }
-                    } else {
-                        console.log("Document does not exist, trying subcollection approach");
-                    }
-                }
-                
-                // Third approach: Try as subcollection
-                if (fetchedData.length === 0) {
-                    console.log("Strategy 3: Subcollection approach");
-                    // Try attendance/{documentId}/*
-                    if (documentId) {
-                        let subPath = `${collectionPath}/${documentId}`;
-                        console.log(`Trying subcollection path: ${subPath}`);
-                        
-                        try {
-                            const subcollectionDocs = await db.collection(subPath).limit(limit).get();
-                            
-                            if (!subcollectionDocs.empty) {
-                                console.log(`Found ${subcollectionDocs.docs.length} documents in subcollection`);
-                                fetchedData = subcollectionDocs.docs.map(doc => ({
-                                    id: doc.id,
-                                    parent_path: subPath,
-                                    strategy: "subcollection",
-                                    ...doc.data()
-                                }));
-                            } else {
-                                console.log("No documents in subcollection");
-                            }
-                        } catch (error) {
-                            console.error("Error trying subcollection approach:", error);
-                        }
-                    }
-                }
-                
-                // Fourth approach: Query view URL format
-                if (fetchedData.length === 0) {
-                    console.log("Strategy 4: Full collection");
-                    // Try fetching from collection without document ID constraint
-                    const allDocs = await db.collection(collectionPath)
-                        .limit(limit)
-                        .get();
-                        
-                    if (!allDocs.empty) {
-                        console.log(`Found ${allDocs.docs.length} documents in collection`);
-                        fetchedData = allDocs.docs.map(doc => ({
-                            id: doc.id,
-                            strategy: "full_collection",
-                            ...doc.data()
-                        }));
-                    }
-                }
-                
-                // Process and display the fetched data
-                document.getElementById('loadingData').classList.add('hidden');
-                
-                if (fetchedData.length === 0) {
-                    document.getElementById('noDataMessage').classList.remove('hidden');
-                    return;
-                }
-                
-                // Update row count
-                document.getElementById('rowCount').textContent = fetchedData.length;
-                
-                // Extract all possible headers from all documents
-                headers = ['id'];
-                fetchedData.forEach(item => {
-                    Object.keys(item).forEach(key => {
-                        if (key !== 'id' && !headers.includes(key)) {
-                            headers.push(key);
-                        }
-                    });
-                });
-                
-                // Initialize visibleColumns with all headers
-                visibleColumns = new Set(headers);
-                
-                // Create column toggle checkboxes
-                createColumnToggles();
-                
-                // Create and display the table
-                renderTable();
-                
-                // Show table and export button
-                document.getElementById('tableContainer').classList.remove('hidden');
-                document.getElementById('exportExcel').classList.remove('hidden');
-                
-                // Apply table settings
-                applyTableSettings();
-                
+                await auth.signInWithEmailAndPassword(email, password);
+                // Login successful, will be handled by the auth state change listener
             } catch (error) {
-                document.getElementById('loadingData').classList.add('hidden');
-                alert(`Error fetching data: ${error.message}`);
+                errorElement.textContent = error.message;
+                errorElement.classList.remove('hidden');
             }
         });
-
-        // Create column toggle checkboxes
-        function createColumnToggles() {
-            const container = document.getElementById('columnToggles');
-            container.innerHTML = '';
-            
-            headers.forEach(header => {
-                const checkboxId = `toggle-${header}`;
+        
+        // Logout handling
+        document.getElementById('logout-btn')?.addEventListener('click', async () => {
+            try {
+                await auth.signOut();
+                // Logout successful, will be handled by the auth state change listener
+            } catch (error) {
+                console.error('Error signing out:', error);
+            }
+        });
+        
+        // Auth state changes
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // User is signed in
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('app-section').classList.remove('hidden');
+                initApp();
+            } else {
+                // User is signed out
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('app-section').classList.add('hidden');
                 
-                const wrapper = document.createElement('div');
-                wrapper.className = 'inline-flex items-center';
+                // Clear form
+                document.getElementById('login-form').reset();
+                document.getElementById('login-error').classList.add('hidden');
+            }
+        });
+        
+        // Tab handling
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
                 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = checkboxId;
-                checkbox.className = 'mr-1';
-                checkbox.checked = visibleColumns.has(header);
-                checkbox.addEventListener('change', () => {
-                    if (checkbox.checked) {
-                        visibleColumns.add(header);
-                    } else {
-                        visibleColumns.delete(header);
-                    }
-                    renderTable();
+                // Update tab buttons
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('tab-active');
                 });
+                btn.classList.add('tab-active');
                 
-                const label = document.createElement('label');
-                label.htmlFor = checkboxId;
-                label.className = 'text-sm mr-3';
-                label.textContent = header;
-                
-                wrapper.appendChild(checkbox);
-                wrapper.appendChild(label);
-                container.appendChild(wrapper);
-            });
-        }
-
-        // Create the data table with headers and rows
-        function renderTable() {
-            const visibleHeaders = headers.filter(header => visibleColumns.has(header));
-            
-            // Create table header
-            const headerRow = document.getElementById('tableHeader');
-            headerRow.innerHTML = '';
-            
-            // Create table headers with sorting and reordering capabilities
-            visibleHeaders.forEach(header => {
-                const th = document.createElement('th');
-                th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider resizable-th';
-                th.dataset.column = header;
-                
-                // Set width from saved columnWidths if available
-                if (columnWidths[header]) {
-                    th.style.width = columnWidths[header];
-                }
-                
-                // Create header content with sort icon
-                const headerContent = document.createElement('div');
-                headerContent.className = 'flex items-center cursor-pointer';
-                headerContent.textContent = header;
-                
-                // Add sort icon if this column is sorted
-                if (sortConfig.column === header) {
-                    const sortIcon = document.createElement('span');
-                    sortIcon.className = `table-sort-icon ${sortConfig.direction}`;
-                    headerContent.appendChild(sortIcon);
-                }
-                
-                // Add sorting functionality
-                headerContent.addEventListener('click', () => {
-                    // Update sort configuration
-                    if (sortConfig.column === header) {
-                        // Toggle direction if clicking the same column
-                        sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
-                    } else {
-                        // Set new column and default to ascending
-                        sortConfig.column = header;
-                        sortConfig.direction = 'asc';
-                    }
-                    
-                    // Sort and re-render the table
-                    sortData();
-                    renderTable();
+                // Update tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
                 });
+                document.getElementById(`${tabId}-tab`).classList.add('active');
                 
-                th.appendChild(headerContent);
-                headerRow.appendChild(th);
+                // Redraw tables if needed (fixes layout issues)
+                if (tabId === 'attendance' && attendanceTable) {
+                    attendanceTable.columns.adjust().draw();
+                } else if (tabId === 'employees' && employeesTable) {
+                    employeesTable.columns.adjust().draw();
+                } else if (tabId === 'reports' && reportTable) {
+                    reportTable.columns.adjust().draw();
+                    updateCharts();
+                } else if (tabId === 'payroll' && payrollTable) {
+                    payrollTable.columns.adjust().draw();
+                }
             });
+        });
+        
+        // Add modal handling
+        document.getElementById('add-employee-btn')?.addEventListener('click', () => {
+            document.getElementById('add-employee-modal').classList.remove('hidden');
+            document.getElementById('add-employee-form').reset();
+        });
+        
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('add-employee-modal').classList.add('hidden');
+            });
+        });
+        
+        // Add employee form handling
+        document.getElementById('add-employee-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
             
-            // Make headers draggable for reordering
-            if (sortable) {
-                sortable.destroy();
+            const formData = new FormData(e.target);
+            const employeeData = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                phone: formData.get('phone') || '',
+                hireDate: formData.get('hireDate'),
+                baseSalary: parseFloat(formData.get('baseSalary')),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            try {
+                await db.collection('employees').add(employeeData);
+                document.getElementById('add-employee-modal').classList.add('hidden');
+                loadEmployees();
+                updateEmployeeFilter();
+            } catch (error) {
+                console.error('Error adding employee:', error);
+                alert('حدث خطأ أثناء إضافة الموظف. يرجى المحاولة مرة أخرى.');
+            }
+        });
+        
+        // Load attendance data
+        const loadAttendance = async () => {
+            try {
+                const snapshot = await db.collection('attendance').orderBy('timestamp', 'desc').get();
+                attendanceData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                initAttendanceTable(attendanceData);
+                updateEmployeeFilter();
+                document.getElementById('loading-section').classList.add('hidden');
+            } catch (error) {
+                console.error('Error loading attendance data:', error);
+                document.getElementById('loading-section').classList.add('hidden');
+                alert('حدث خطأ أثناء تحميل بيانات الحضور. يرجى المحاولة مرة أخرى.');
+            }
+        };
+        
+        // Load employees data
+        const loadEmployees = async () => {
+            try {
+                const snapshot = await db.collection('employees').orderBy('name').get();
+                employeesData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                initEmployeesTable(employeesData);
+            } catch (error) {
+                console.error('Error loading employees data:', error);
+                alert('حدث خطأ أثناء تحميل بيانات الموظفين. يرجى المحاولة مرة أخرى.');
+            }
+        };
+        
+        // Initialize attendance table
+        const initAttendanceTable = (data) => {
+            if (attendanceTable) {
+                attendanceTable.destroy();
             }
             
-            sortable = new Sortable(headerRow, {
-                animation: 150,
-                handle: 'th',
-                draggable: 'th',
-                ghostClass: 'sortable-ghost',
-                chosenClass: 'dragging',
-                onEnd: function() {
-                    // Re-order headers array based on current DOM order
-                    const newHeaders = [];
-                    headerRow.querySelectorAll('th').forEach(th => {
-                        const column = th.dataset.column;
-                        newHeaders.push(column);
-                    });
-                    
-                    // Update headers with the subset of visible columns in their new order
-                    const remaining = headers.filter(h => !visibleColumns.has(h));
-                    headers = [...newHeaders, ...remaining];
-                    
-                    // Re-render the table
-                    renderTable();
-                }
-            });
-            
-            // Make columns resizable
-            headerRow.querySelectorAll('th').forEach(th => {
-                th.addEventListener('mousedown', function(e) {
-                    // Only handle resize if clicked near the right edge
-                    const rect = th.getBoundingClientRect();
-                    const isRTL = document.dir === 'rtl';
-                    const edge = isRTL ? 'left' : 'right';
-                    const edgePos = isRTL ? rect.left : rect.right;
-                    const isEdge = isRTL 
-                        ? (e.clientX - edgePos < 5) 
-                        : (edgePos - e.clientX < 5);
-                    
-                    if (!isEdge) return;
-                    
-                    e.preventDefault();
-                    
-                    const startX = e.clientX;
-                    const startWidth = th.offsetWidth;
-                    const column = th.dataset.column;
-                    
-                    function handleMouseMove(e) {
-                        const width = isRTL 
-                            ? startWidth - (e.clientX - startX)
-                            : startWidth + (e.clientX - startX);
-                        
-                        if (width > 50) {
-                            th.style.width = `${width}px`;
-                            columnWidths[column] = `${width}px`;
+            attendanceTable = $('#attendance-table').DataTable({
+                data: data,
+                columns: [
+                    { data: 'name' },
+                    { 
+                        data: 'date',
+                        render: function(data) {
+                            return formatDateForDisplay(data);
+                        }
+                    },
+                    { data: 'time' },
+                    { data: 'type' },
+                    { 
+                        data: 'coordinates',
+                        render: function(data) {
+                            if (!data) return 'غير متاح';
+                            return `${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`;
+                        }
+                    },
+                    { 
+                        data: 'workHours',
+                        render: function(data) {
+                            return data ? `${data} ساعة` : '-';
                         }
                     }
-                    
-                    function handleMouseUp() {
-                        document.removeEventListener('mousemove', handleMouseMove);
-                        document.removeEventListener('mouseup', handleMouseUp);
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
+                },
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'excel',
+                        text: '<i class="fas fa-file-excel mr-1"></i> تصدير Excel',
+                        className: 'exportExcel',
+                        title: 'سجلات الحضور والانصراف'
+                    },
+                    {
+                        extend: 'pdf',
+                        text: '<i class="fas fa-file-pdf mr-1"></i> تصدير PDF',
+                        className: 'exportPdf',
+                        title: 'سجلات الحضور والانصراف'
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fas fa-print mr-1"></i> طباعة',
+                        className: 'printTable'
                     }
-                    
-                    document.addEventListener('mousemove', handleMouseMove);
-                    document.addEventListener('mouseup', handleMouseUp);
-                });
+                ],
+                responsive: true,
+                order: [[1, 'desc'], [2, 'desc']]
             });
-            
-            // Create table body
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '';
-            
-            fetchedData.forEach((item, index) => {
-                const row = document.createElement('tr');
-                
-                // Apply alternating row colors if enabled
-                if (document.getElementById('alternateRowColors').checked) {
-                    row.className = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
-                } else {
-                    row.className = 'bg-white dark:bg-gray-800';
-                }
-                
-                visibleHeaders.forEach(header => {
-                    const td = document.createElement('td');
-                    td.className = 'px-6 py-4 whitespace-nowrap text-sm';
-                    
-                    // Format cell value based on type
-                    let value = item[header];
-                    if (value === undefined) {
-                        td.textContent = '';
-                    } else if (value === null) {
-                        td.textContent = 'null';
-                    } else if (typeof value === 'object') {
-                        if (value instanceof Date) {
-                            td.textContent = value.toISOString();
-                        } else if (value.toDate && typeof value.toDate === 'function') {
-                            // Handle Firestore Timestamp
-                            td.textContent = value.toDate().toISOString();
-                        } else {
-                            td.textContent = JSON.stringify(value);
-                        }
-                    } else {
-                        td.textContent = value.toString();
-                    }
-                    
-                    row.appendChild(td);
-                });
-                
-                tableBody.appendChild(row);
-            });
-        }
-
-        // Sort the data based on sortConfig
-        function sortData() {
-            const { column, direction } = sortConfig;
-            
-            if (column) {
-                fetchedData.sort((a, b) => {
-                    const aValue = a[column];
-                    const bValue = b[column];
-                    
-                    // Handle different value types
-                    let comparison = 0;
-                    
-                    if (aValue === undefined && bValue === undefined) {
-                        comparison = 0;
-                    } else if (aValue === undefined) {
-                        comparison = -1;
-                    } else if (bValue === undefined) {
-                        comparison = 1;
-                    } else if (aValue === null && bValue === null) {
-                        comparison = 0;
-                    } else if (aValue === null) {
-                        comparison = -1;
-                    } else if (bValue === null) {
-                        comparison = 1;
-                    } else if (typeof aValue === 'object' && aValue.toDate && typeof aValue.toDate === 'function') {
-                        // Firestore timestamps
-                        comparison = aValue.toDate().getTime() - bValue.toDate().getTime();
-                    } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-                        comparison = aValue - bValue;
-                    } else {
-                        // Convert to strings for comparison
-                        const aString = String(aValue);
-                        const bString = String(bValue);
-                        comparison = aString.localeCompare(bString);
-                    }
-                    
-                    return direction === 'asc' ? comparison : -comparison;
-                });
+        };
+        
+        // Initialize employees table
+        const initEmployeesTable = (data) => {
+            if (employeesTable) {
+                employeesTable.destroy();
             }
-        }
-
-        // Export to Excel
-        document.getElementById('exportExcel').addEventListener('click', () => {
-            if (fetchedData.length === 0) {
-                alert('No data to export');
+            
+            employeesTable = $('#employees-table').DataTable({
+                data: data,
+                columns: [
+                    { data: 'name' },
+                    { data: 'email' },
+                    { 
+                        data: 'phone',
+                        render: function(data) {
+                            return data || '-';
+                        }
+                    },
+                    { 
+                        data: 'hireDate',
+                        render: function(data) {
+                            return formatDateForDisplay(data);
+                        }
+                    },
+                    { 
+                        data: 'baseSalary',
+                        render: function(data) {
+                            return `${data.toLocaleString()} ريال`;
+                        }
+                    },
+                    { 
+                        data: 'id',
+                        render: function(data) {
+                            return `
+                                <div class="flex gap-2">
+                                    <button class="edit-employee p-1 text-primary" data-id="${data}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="delete-employee p-1 text-danger" data-id="${data}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
+                },
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'excel',
+                        text: '<i class="fas fa-file-excel mr-1"></i> تصدير Excel',
+                        className: 'exportExcel',
+                        title: 'قائمة الموظفين'
+                    },
+                    {
+                        extend: 'pdf',
+                        text: '<i class="fas fa-file-pdf mr-1"></i> تصدير PDF',
+                        className: 'exportPdf',
+                        title: 'قائمة الموظفين'
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fas fa-print mr-1"></i> طباعة',
+                        className: 'printTable'
+                    }
+                ],
+                responsive: true
+            });
+            
+            // Add event handlers for edit/delete buttons
+            $('#employees-table').on('click', '.edit-employee', function() {
+                const employeeId = $(this).data('id');
+                editEmployee(employeeId);
+            });
+            
+            $('#employees-table').on('click', '.delete-employee', function() {
+                const employeeId = $(this).data('id');
+                deleteEmployee(employeeId);
+            });
+        };
+        
+        // Update employee filter dropdown
+        const updateEmployeeFilter = () => {
+            const filterSelect = document.getElementById('employee-filter');
+            if (!filterSelect) return;
+            
+            // Clear previous options except the first one (All employees)
+            while (filterSelect.options.length > 1) {
+                filterSelect.remove(1);
+            }
+            
+            // Get unique employees from attendance data
+            const uniqueEmployees = [...new Set(attendanceData.map(record => record.name))];
+            
+            // Add employees to dropdown
+            uniqueEmployees.sort().forEach(employee => {
+                const option = document.createElement('option');
+                option.value = employee;
+                option.textContent = employee;
+                filterSelect.appendChild(option);
+            });
+        };
+        
+        // Filter attendance by date
+        document.getElementById('filter-date')?.addEventListener('click', () => {
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+            
+            if (!dateFrom && !dateTo) {
+                initAttendanceTable(attendanceData);
                 return;
             }
             
-            try {
-                // Get visible headers for export
-                const visibleHeaders = headers.filter(header => visibleColumns.has(header));
-                
-                // Prepare worksheet data with only visible columns
-                const ws_data = [visibleHeaders];
-                
-                fetchedData.forEach(item => {
-                    const row = [];
-                    visibleHeaders.forEach(header => {
-                        let value = item[header];
-                        
-                        // Format value for Excel
-                        if (value === undefined) {
-                            value = '';
-                        } else if (value === null) {
-                            value = 'null';
-                        } else if (typeof value === 'object') {
-                            if (value instanceof Date) {
-                                value = value.toISOString();
-                            } else if (value.toDate && typeof value.toDate === 'function') {
-                                // Handle Firestore Timestamp
-                                value = value.toDate().toISOString();
-                            } else {
-                                value = JSON.stringify(value);
+            let filteredData = [...attendanceData];
+            
+            if (dateFrom) {
+                filteredData = filteredData.filter(record => record.date >= dateFrom);
+            }
+            
+            if (dateTo) {
+                filteredData = filteredData.filter(record => record.date <= dateTo);
+            }
+            
+            initAttendanceTable(filteredData);
+        });
+        
+        // Filter attendance by employee
+        document.getElementById('filter-employee')?.addEventListener('click', () => {
+            const employee = document.getElementById('employee-filter').value;
+            
+            if (!employee) {
+                initAttendanceTable(attendanceData);
+                return;
+            }
+            
+            const filteredData = attendanceData.filter(record => record.name === employee);
+            initAttendanceTable(filteredData);
+        });
+        
+        // Filter attendance by type
+        document.getElementById('filter-type')?.addEventListener('click', () => {
+            const type = document.getElementById('type-filter').value;
+            
+            if (!type) {
+                initAttendanceTable(attendanceData);
+                return;
+            }
+            
+            const filteredData = attendanceData.filter(record => record.type === type);
+            initAttendanceTable(filteredData);
+        });
+        
+        // Initialize charts
+        const initCharts = () => {
+            // Attendance chart (total attendance by month)
+            const ctxAttendance = document.getElementById('attendance-chart')?.getContext('2d');
+            if (ctxAttendance) {
+                attendanceChart = new Chart(ctxAttendance, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'الحضور',
+                            backgroundColor: '#10B981',
+                            data: []
+                        }, {
+                            label: 'الغياب',
+                            backgroundColor: '#EF4444',
+                            data: []
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'عدد الأيام'
+                                }
                             }
                         }
-                        
-                        row.push(value);
-                    });
+                    }
+                });
+            }
+            
+            // Hours chart (total hours by employee)
+            const ctxHours = document.getElementById('hours-chart')?.getContext('2d');
+            if (ctxHours) {
+                hoursChart = new Chart(ctxHours, {
+                    type: 'pie',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            backgroundColor: [
+                                '#5D5CDE', '#10B981', '#F59E0B', '#EF4444',
+                                '#4C51BF', '#059669', '#D97706', '#B91C1C'
+                            ],
+                            data: []
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            updateCharts();
+        };
+        
+        // Update charts with current data
+        const updateCharts = () => {
+            if (!attendanceData.length) return;
+            
+            // Update attendance chart
+            if (attendanceChart) {
+                // Group records by month
+                const attendanceByMonth = {};
+                const today = new Date();
+                const workingDaysInMonth = 22; // Average working days in a month
+                
+                // Get the last 6 months
+                for (let i = 0; i < 6; i++) {
+                    const date = new Date();
+                    date.setMonth(today.getMonth() - i);
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    const monthName = date.toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
                     
-                    ws_data.push(row);
+                    attendanceByMonth[monthKey] = {
+                        name: monthName,
+                        attendance: 0,
+                        absence: workingDaysInMonth // Start with all days as absence
+                    };
+                }
+                
+                // Count attendance days
+                attendanceData.forEach(record => {
+                    if (record.type === 'حضور') {
+                        const monthKey = record.date.substring(0, 7);
+                        if (attendanceByMonth[monthKey]) {
+                            attendanceByMonth[monthKey].attendance++;
+                            attendanceByMonth[monthKey].absence--;
+                        }
+                    }
                 });
                 
-                // Create worksheet and workbook
-                const ws = XLSX.utils.aoa_to_sheet(ws_data);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'FirestoreData');
+                // Sort months chronologically
+                const sortedMonths = Object.keys(attendanceByMonth).sort();
                 
-                // Generate filename
-                const collectionPath = document.getElementById('collectionPath').value;
-                const documentId = document.getElementById('documentId').value.trim();
-                const filename = documentId 
-                    ? `${collectionPath}_${documentId}.xlsx` 
-                    : `${collectionPath}_data.xlsx`;
-                
-                // Export to file
-                XLSX.writeFile(wb, filename);
-                
-            } catch (error) {
-                alert(`Error exporting to Excel: ${error.message}`);
+                // Update chart data
+                attendanceChart.data.labels = sortedMonths.map(key => attendanceByMonth[key].name);
+                attendanceChart.data.datasets[0].data = sortedMonths.map(key => attendanceByMonth[key].attendance);
+                attendanceChart.data.datasets[1].data = sortedMonths.map(key => attendanceByMonth[key].absence);
+                attendanceChart.update();
             }
+            
+            // Update hours chart
+            if (hoursChart) {
+                // Group work hours by employee
+                const hoursByEmployee = {};
+                
+                attendanceData.forEach(record => {
+                    if (record.workHours) {
+                        if (!hoursByEmployee[record.name]) {
+                            hoursByEmployee[record.name] = 0;
+                        }
+                        hoursByEmployee[record.name] += record.workHours;
+                    }
+                });
+                
+                // Sort employees by hours (descending)
+                const sortedEmployees = Object.keys(hoursByEmployee).sort((a, b) => hoursByEmployee[b] - hoursByEmployee[a]);
+                
+                // Limit to top 8 employees for better visualization
+                const topEmployees = sortedEmployees.slice(0, 8);
+                
+                // Update chart data
+                hoursChart.data.labels = topEmployees;
+                hoursChart.data.datasets[0].data = topEmployees.map(emp => hoursByEmployee[emp]);
+                hoursChart.update();
+            }
+        };
+        
+        // Generate monthly report
+        document.getElementById('generate-report')?.addEventListener('click', () => {
+            const monthInput = document.getElementById('report-month').value;
+            if (!monthInput) {
+                alert('يرجى اختيار الشهر أولاً');
+                return;
+            }
+            
+            const [year, month] = monthInput.split('-');
+            const monthStart = `${year}-${month}-01`;
+            const monthEnd = `${year}-${month}-${new Date(year, month, 0).getDate()}`;
+            
+            const monthName = new Date(year, month - 1).toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
+            document.getElementById('report-title').textContent = monthName;
+            
+            generateEmployeeReport(monthStart, monthEnd);
+            document.getElementById('report-container').classList.remove('hidden');
         });
+        
+        // Generate employee report for a specific period
+        const generateEmployeeReport = (startDate, endDate) => {
+            // Filter attendance records for the selected period
+            const periodRecords = attendanceData.filter(record => 
+                record.date >= startDate && record.date <= endDate
+            );
+            
+            // Group by employee
+            const employeeReports = {};
+            
+            // Get all unique employees
+            const uniqueEmployees = [...new Set(periodRecords.map(record => record.name))];
+            
+            // Initialize employee reports
+            uniqueEmployees.forEach(name => {
+                employeeReports[name] = {
+                    name,
+                    attendanceDays: 0,
+                    absenceDays: 0,
+                    totalHours: 0,
+                    averageHours: 0,
+                    lateCount: 0
+                };
+            });
+            
+            // Calculate working days in the period
+            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+            const start = new Date(startYear, startMonth - 1, startDay);
+            const end = new Date(endYear, endMonth - 1, endDay);
+            
+            const workingDays = getWorkingDaysCount(start, end);
+            
+            // Analyze attendance records
+            const attendanceDays = {}; // Keep track of days employee attended
+            
+            periodRecords.forEach(record => {
+                const { name, date, time, type, workHours } = record;
+                
+                if (type === 'حضور') {
+                    // Count attendance days (ensure each day is counted only once)
+                    if (!attendanceDays[`${name}-${date}`]) {
+                        attendanceDays[`${name}-${date}`] = true;
+                        employeeReports[name].attendanceDays++;
+                    }
+                    
+                    // Check if late (after 9:00 AM)
+                    const [hours] = time.split(':').map(Number);
+                    if (hours >= 9) {
+                        employeeReports[name].lateCount++;
+                    }
+                }
+                
+                // Add work hours
+                if (workHours) {
+                    employeeReports[name].totalHours += workHours;
+                }
+            });
+            
+            // Calculate absence days and average hours
+            uniqueEmployees.forEach(name => {
+                employeeReports[name].absenceDays = workingDays - employeeReports[name].attendanceDays;
+                
+                if (employeeReports[name].attendanceDays > 0) {
+                    employeeReports[name].averageHours = 
+                        (employeeReports[name].totalHours / employeeReports[name].attendanceDays).toFixed(2);
+                }
+            });
+            
+            // Initialize report table
+            if (reportTable) {
+                reportTable.destroy();
+            }
+            
+            reportTable = $('#report-table').DataTable({
+                data: Object.values(employeeReports),
+                columns: [
+                    { data: 'name' },
+                    { data: 'attendanceDays' },
+                    { data: 'absenceDays' },
+                    { 
+                        data: 'totalHours',
+                        render: function(data) {
+                            return `${data.toFixed(2)} ساعة`;
+                        }
+                    },
+                    { 
+                        data: 'averageHours',
+                        render: function(data) {
+                            return `${data} ساعة`;
+                        }
+                    },
+                    { data: 'lateCount' }
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
+                },
+                paging: false,
+                info: false,
+                searching: false,
+                responsive: true
+            });
+            
+            // Set up export buttons for the report
+            document.getElementById('export-excel')?.addEventListener('click', () => {
+                exportReportToExcel(employeeReports, `تقرير_${document.getElementById('report-title').textContent}`);
+            });
+            
+            document.getElementById('export-pdf')?.addEventListener('click', () => {
+                exportReportToPDF(employeeReports, `تقرير_${document.getElementById('report-title').textContent}`);
+            });
+        };
+        
+        // Get count of working days (excluding weekends) between two dates
+        const getWorkingDaysCount = (startDate, endDate) => {
+            let count = 0;
+            const currentDate = new Date(startDate);
+            
+            while (currentDate <= endDate) {
+                const dayOfWeek = currentDate.getDay();
+                if (dayOfWeek !== 5 && dayOfWeek !== 6) { // Not Friday or Saturday
+                    count++;
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            return count;
+        };
+        
+        // Calculate payroll
+        document.getElementById('calculate-payroll')?.addEventListener('click', () => {
+            const monthInput = document.getElementById('payroll-month').value;
+            if (!monthInput) {
+                alert('يرجى اختيار الشهر أولاً');
+                return;
+            }
+            
+            const [year, month] = monthInput.split('-');
+            const monthStart = `${year}-${month}-01`;
+            const monthEnd = `${year}-${month}-${new Date(year, month, 0).getDate()}`;
+            
+            const monthName = new Date(year, month - 1).toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
+            document.getElementById('payroll-title').textContent = monthName;
+            
+            calculateMonthlyPayroll(monthStart, monthEnd);
+            document.getElementById('payroll-container').classList.remove('hidden');
+        });
+        
+        // Calculate monthly payroll
+        const calculateMonthlyPayroll = (startDate, endDate) => {
+            // Filter attendance records for the selected period
+            const periodRecords = attendanceData.filter(record => 
+                record.date >= startDate && record.date <= endDate
+            );
+            
+            // Calculate working days in the period
+            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+            const start = new Date(startYear, startMonth - 1, startDay);
+            const end = new Date(endYear, endMonth - 1, endDay);
+            
+            const workingDays = getWorkingDaysCount(start, end);
+            
+            // Prepare payroll data
+            const payrollData = [];
+            
+            // Process each employee
+            employeesData.forEach(employee => {
+                // Get attendance records for this employee
+                const employeeRecords = periodRecords.filter(record => record.name === employee.name);
+                
+                // Count unique attendance days
+                const attendanceDays = new Set();
+                employeeRecords.forEach(record => {
+                    if (record.type === 'حضور') {
+                        attendanceDays.add(record.date);
+                    }
+                });
+                
+                // Calculate total work hours
+                let totalHours = 0;
+                employeeRecords.forEach(record => {
+                    if (record.workHours) {
+                        totalHours += record.workHours;
+                    }
+                });
+                
+                // Calculate allowances (10% of base salary for perfect attendance)
+                const attendanceRatio = attendanceDays.size / workingDays;
+                let allowances = 0;
+                if (attendanceRatio >= 0.95) { // 95% or higher attendance
+                    allowances = employee.baseSalary * 0.1;
+                }
+                
+                // Calculate deductions (based on absences)
+                const absenceDays = workingDays - attendanceDays.size;
+                const dailyRate = employee.baseSalary / workingDays;
+                let deductions = absenceDays * dailyRate;
+                
+                // Calculate net salary
+                const netSalary = employee.baseSalary + allowances - deductions;
+                
+                // Add to payroll data
+                payrollData.push({
+                    name: employee.name,
+                    baseSalary: employee.baseSalary,
+                    workDays: attendanceDays.size,
+                    totalHours: totalHours.toFixed(2),
+                    allowances: allowances.toFixed(2),
+                    deductions: deductions.toFixed(2),
+                    netSalary: netSalary.toFixed(2)
+                });
+            });
+            
+            // Initialize payroll table
+            if (payrollTable) {
+                payrollTable.destroy();
+            }
+            
+            payrollTable = $('#payroll-table').DataTable({
+                data: payrollData,
+                columns: [
+                    { data: 'name' },
+                    { 
+                        data: 'baseSalary',
+                        render: function(data) {
+                            return `${parseFloat(data).toLocaleString()} ريال`;
+                        }
+                    },
+                    { data: 'workDays' },
+                    { 
+                        data: 'totalHours',
+                        render: function(data) {
+                            return `${data} ساعة`;
+                        }
+                    },
+                    { 
+                        data: 'allowances',
+                        render: function(data) {
+                            return `${parseFloat(data).toLocaleString()} ريال`;
+                        }
+                    },
+                    { 
+                        data: 'deductions',
+                        render: function(data) {
+                            return `${parseFloat(data).toLocaleString()} ريال`;
+                        }
+                    },
+                    { 
+                        data: 'netSalary',
+                        render: function(data) {
+                            return `${parseFloat(data).toLocaleString()} ريال`;
+                        }
+                    }
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.3/i18n/ar.json'
+                },
+                paging: false,
+                info: false,
+                searching: false,
+                responsive: true
+            });
+            
+            // Set up export buttons for payroll
+            document.getElementById('export-payroll-excel')?.addEventListener('click', () => {
+                exportPayrollToExcel(payrollData, `مرتبات_${document.getElementById('payroll-title').textContent}`);
+            });
+            
+            document.getElementById('export-payroll-pdf')?.addEventListener('click', () => {
+                exportPayrollToPDF(payrollData, `مرتبات_${document.getElementById('payroll-title').textContent}`);
+            });
+        };
+        
+        // Export report to Excel
+        const exportReportToExcel = (data, fileName) => {
+            // Convert data to CSV format
+            const headers = ['الموظف', 'أيام الحضور', 'أيام الغياب', 'مجموع ساعات العمل', 'متوسط ساعات العمل اليومية', 'عدد مرات التأخير'];
+            
+            let csvContent = headers.join(',') + '\r\n';
+            
+            Object.values(data).forEach(row => {
+                const values = [
+                    row.name,
+                    row.attendanceDays,
+                    row.absenceDays,
+                    row.totalHours.toFixed(2),
+                    row.averageHours,
+                    row.lateCount
+                ];
+                
+                csvContent += values.join(',') + '\r\n';
+            });
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `${fileName}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+        
+        // Export report to PDF
+        const exportReportToPDF = (data, fileName) => {
+            const doc = {
+                pageSize: 'A4',
+                pageOrientation: 'portrait',
+                content: [
+                    { text: fileName, style: 'header' },
+                    { text: '\n' },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto'],
+                            body: [
+                                ['الموظف', 'أيام الحضور', 'أيام الغياب', 'مجموع ساعات العمل', 'متوسط ساعات العمل', 'مرات التأخير'],
+                                ...Object.values(data).map(row => [
+                                    row.name,
+                                    row.attendanceDays.toString(),
+                                    row.absenceDays.toString(),
+                                    row.totalHours.toFixed(2).toString() + ' ساعة',
+                                    row.averageHours.toString() + ' ساعة',
+                                    row.lateCount.toString()
+                                ])
+                            ]
+                        }
+                    }
+                ],
+                styles: {
+                    header: {
+                        fontSize: 18,
+                        bold: true,
+                        alignment: 'center',
+                        margin: [0, 0, 0, 10]
+                    }
+                },
+                defaultStyle: {
+                    alignment: 'right',
+                    font: 'Tajawal'
+                }
+            };
+            
+            pdfMake.createPdf(doc).download(fileName + '.pdf');
+        };
+        
+        // Export payroll to Excel
+        const exportPayrollToExcel = (data, fileName) => {
+            // Convert data to CSV format
+            const headers = ['الموظف', 'الراتب الأساسي', 'أيام العمل', 'إجمالي ساعات العمل', 'البدلات', 'الخصومات', 'صافي الراتب'];
+            
+            let csvContent = headers.join(',') + '\r\n';
+            
+            data.forEach(row => {
+                const values = [
+                    row.name,
+                    row.baseSalary,
+                    row.workDays,
+                    row.totalHours,
+                    row.allowances,
+                    row.deductions,
+                    row.netSalary
+                ];
+                
+                csvContent += values.join(',') + '\r\n';
+            });
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `${fileName}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+        
+        // Export payroll to PDF
+        const exportPayrollToPDF = (data, fileName) => {
+            const doc = {
+                pageSize: 'A4',
+                pageOrientation: 'landscape',
+                content: [
+                    { text: fileName, style: 'header' },
+                    { text: '\n' },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
+                            body: [
+                                ['الموظف', 'الراتب الأساسي', 'أيام العمل', 'ساعات العمل', 'البدلات', 'الخصومات', 'صافي الراتب'],
+                                ...data.map(row => [
+                                    row.name,
+                                    parseFloat(row.baseSalary).toLocaleString() + ' ريال',
+                                    row.workDays.toString(),
+                                    row.totalHours.toString() + ' ساعة',
+                                    parseFloat(row.allowances).toLocaleString() + ' ريال',
+                                    parseFloat(row.deductions).toLocaleString() + ' ريال',
+                                    parseFloat(row.netSalary).toLocaleString() + ' ريال'
+                                ])
+                            ]
+                        }
+                    }
+                ],
+                styles: {
+                    header: {
+                        fontSize: 18,
+                        bold: true,
+                        alignment: 'center',
+                        margin: [0, 0, 0, 10]
+                    }
+                },
+                defaultStyle: {
+                    alignment: 'right',
+                    font: 'Tajawal'
+                }
+            };
+            
+            pdfMake.createPdf(doc).download(fileName + '.pdf');
+        };
+        
+        // Edit employee
+        const editEmployee = (employeeId) => {
+            // Implement edit employee functionality
+            console.log('Edit employee:', employeeId);
+            // This would typically show a modal with a form pre-filled with employee data
+        };
+        
+        // Delete employee
+        const deleteEmployee = async (employeeId) => {
+            if (confirm('هل أنت متأكد من رغبتك في حذف هذا الموظف؟')) {
+                try {
+                    await db.collection('employees').doc(employeeId).delete();
+                    loadEmployees();
+                } catch (error) {
+                    console.error('Error deleting employee:', error);
+                    alert('حدث خطأ أثناء حذف الموظف. يرجى المحاولة مرة أخرى.');
+                }
+            }
+        };
+        
+        // Initialize application
+        const initApp = () => {
+            loadAttendance();
+            loadEmployees();
+            initCharts();
+            
+            // Pre-load some dates
+            const now = new Date();
+            document.getElementById('date-to').value = formatDate(now);
+            
+            const lastMonth = new Date();
+            lastMonth.setMonth(now.getMonth() - 1);
+            document.getElementById('date-from').value = formatDate(lastMonth);
+            
+            const currentMonth = formatDate(now).substring(0, 7);
+            document.getElementById('report-month').value = currentMonth;
+            document.getElementById('payroll-month').value = currentMonth;
+        };
     </script>
 </body>
 </html>
